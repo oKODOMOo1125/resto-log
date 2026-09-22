@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#235A4E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="บันทึกร้าน">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" href="./icon-192.png">
+<title>บันทึกประจำวันร้านอาหาร</title>
+<style>
+/* ---------- tokens ---------- */
+:root{
+  --bg:#EDEAE2; --surface:#FBFAF7; --surface-2:#F3F0E9; --ink:#2A2620; --ink-dim:#726C5F; --line:#DBD5C6;
+  --accent:#235A4E; --accent-ink:#F6F3ED; --accent-soft:#DCE7E2;
+  --success:#2F7A52; --success-bg:#E1EFE4;
+  --info:#2E6690; --info-bg:#E1ECF4;
+  --danger:#B23B37; --danger-bg:#F6E4E1;
+  --warn:#A9721C; --warn-bg:#F5ECD7;
+  --radius-lg:18px; --radius-md:11px; --radius-sm:8px;
+  --shadow:0 1px 3px rgba(30,26,18,.10);
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#17140F; --surface:#211D17; --surface-2:#2A251D; --ink:#EEE8DA; --ink-dim:#9C9382; --line:#39332A;
+    --accent:#57AA94; --accent-ink:#0E1512; --accent-soft:#243731;
+    --success:#4CA279; --success-bg:#1E2E25;
+    --info:#5B9BCB; --info-bg:#1D2A34;
+    --danger:#E08A83; --danger-bg:#332120;
+    --warn:#D6A94F; --warn-bg:#332A18;
+    --shadow:0 1px 3px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#17140F; --surface:#211D17; --surface-2:#2A251D; --ink:#EEE8DA; --ink-dim:#9C9382; --line:#39332A;
+  --accent:#57AA94; --accent-ink:#0E1512; --accent-soft:#243731;
+  --success:#4CA279; --success-bg:#1E2E25;
+  --info:#5B9BCB; --info-bg:#1D2A34;
+  --danger:#E08A83; --danger-bg:#332120;
+  --warn:#D6A94F; --warn-bg:#332A18;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+html{scroll-padding-top:calc(var(--safe-t) + 54px);}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Thonburi,"Noto Sans Thai","Helvetica Neue",sans-serif;
+  font-size:16px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  padding-top:var(--safe-t); padding-bottom:var(--safe-b);
+  overscroll-behavior-y:none;
+}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;}
+input,select,textarea{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 11px;width:100%;}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+button{cursor:pointer;}
+.tnum{font-variant-numeric:tabular-nums;}
+.hide{display:none !important;}
+
+/* ---------- app shell ---------- */
+#app{max-width:560px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;position:relative;}
+#banners{position:sticky;top:0;z-index:30;}
+.banner{padding:9px 16px;font-size:13px;display:flex;gap:8px;align-items:center;cursor:pointer;border-bottom:1px solid var(--line);}
+.banner.warn{background:var(--warn-bg);color:var(--warn);}
+.banner.muted{background:var(--surface-2);color:var(--ink-dim);}
+
+header.topbar{
+  position:sticky; top:0; z-index:20; background:var(--bg);
+  padding:10px 16px 8px; display:flex; align-items:center; justify-content:space-between; gap:6px;
+  border-bottom:1px solid var(--line);
+}
+.datenav{display:flex;align-items:center;gap:2px;flex:1;justify-content:center;}
+.datenav button{background:none;border:none;color:var(--ink-dim);font-size:19px;padding:6px 10px;border-radius:var(--radius-sm);}
+.datenav button:active{background:var(--surface-2);}
+.datelabel{text-align:center;cursor:pointer;padding:2px 6px;}
+.datelabel .d{font-size:16px;font-weight:600;}
+.datelabel .w{font-size:12px;color:var(--ink-dim);}
+.datelabel-wrap{position:relative;display:inline-block;}
+#datepicker{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;margin:0;padding:0;cursor:pointer;font-size:16px;}
+.today-btn{font-size:12px;color:var(--accent);background:var(--accent-soft);border:none;border-radius:20px;padding:6px 11px;font-weight:600;white-space:nowrap;}
+
+main{flex:1;padding:4px 16px 100px;}
+.view{display:none;}
+.view.active{display:block;}
+
+/* tab bar */
+nav.tabbar{
+  position:fixed; left:0; right:0; bottom:0; z-index:25;
+  max-width:560px; margin:0 auto;
+  background:var(--surface); border-top:1px solid var(--line);
+  display:flex; padding-bottom:var(--safe-b);
+}
+nav.tabbar button{
+  flex:1; background:none; border:none; padding:9px 4px 8px; display:flex; flex-direction:column; align-items:center; gap:2px;
+  color:var(--ink-dim); font-size:11px; position:relative;
+}
+nav.tabbar button .ic{font-size:20px;line-height:1;}
+nav.tabbar button.active{color:var(--accent);font-weight:600;}
+nav.tabbar button .dot{position:absolute;top:5px;right:calc(50% - 15px);width:7px;height:7px;border-radius:50%;background:var(--danger);}
+
+/* ---------- day summary tally ---------- */
+.tally{padding:14px 2px 10px;}
+.tally-row{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;}
+.tally-row .k{color:var(--ink-dim);font-size:13px;}
+.tally-row .v{font-size:16px;font-weight:600;}
+.tally-row.total{border-top:1px dashed var(--line);margin-top:4px;padding-top:9px;}
+.tally-row.total .v{font-size:20px;}
+.closed-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;background:var(--surface-2);color:var(--ink-dim);border-radius:20px;padding:4px 10px;margin-top:4px;}
+
+.float-strip{display:flex;justify-content:space-between;align-items:center;padding:9px 2px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:13px;color:var(--ink-dim);cursor:pointer;}
+.float-strip b{color:var(--ink);font-weight:600;}
+.abnormal-tag{color:var(--warn);font-weight:600;}
+
+/* overview card */
+.overview{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:16px 17px;margin:12px 0 14px;box-shadow:var(--shadow);}
+.ov-totals{display:flex;align-items:stretch;gap:18px;}
+.ov-stat{display:flex;flex-direction:column;gap:3px;}
+.ov-stat .k{font-size:12.5px;color:var(--ink-dim);}
+.ov-stat .v{font-size:25px;font-weight:800;letter-spacing:-.2px;}
+.ov-divider{width:1px;background:var(--line);}
+.ov-tag{font-size:12.5px;color:var(--ink-dim);margin-top:10px;}
+.ov-closed{font-size:15.5px;font-weight:700;color:var(--success);margin-top:12px;}
+.ov-todo{margin-top:14px;padding-top:13px;border-top:1px dashed var(--line);}
+.ov-todo-title{font-size:12.5px;color:var(--ink-dim);margin-bottom:2px;}
+.ov-item{display:block;width:100%;text-align:left;background:none;border:none;padding:7px 0;font-size:14.5px;color:var(--warn);font-weight:600;}
+.ov-allgood{margin-top:14px;padding-top:13px;border-top:1px dashed var(--line);font-size:14.5px;color:var(--success);font-weight:700;}
+
+/* accordion sections (replaces the old always-expanded .blk sections on the Today view) */
+details.acc{border-bottom:1px solid var(--line);}
+details.acc:last-of-type{border-bottom:none;}
+details.acc>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:15px 2px;-webkit-tap-highlight-color:transparent;}
+details.acc>summary::-webkit-details-marker{display:none;}
+details.acc>summary::marker{content:'';}
+.acc-title{font-size:16px;font-weight:700;flex:none;}
+.acc-sub{font-size:13.5px;color:var(--ink-dim);flex:1;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.acc-sub-warn{color:var(--warn);font-weight:600;}
+.acc-chevron{color:var(--ink-dim);font-size:12px;flex:none;transition:transform .18s;}
+details.acc[open]>summary .acc-chevron{transform:rotate(180deg);}
+.acc-body{padding:0 2px 16px;}
+
+/* ---------- sections ---------- */
+section.blk{padding:16px 0;border-bottom:1px solid var(--line);}
+section.blk:last-of-type{border-bottom:none;}
+.blk-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;}
+.blk-head h2{font-size:15px;font-weight:700;margin:0;}
+.blk-head .add{background:var(--accent-soft);color:var(--accent);border:none;border-radius:20px;padding:6px 12px;font-size:13px;font-weight:600;}
+.subgroup-label{font-size:13px;color:var(--ink-dim);margin:12px 0 6px;font-weight:600;}
+.blk-foot{font-size:12.5px;color:var(--ink-dim);margin-top:8px;}
+.empty-hint{font-size:14px;color:var(--ink-dim);padding:8px 0;}
+
+/* meal rows */
+.meal-row{display:flex;align-items:center;gap:10px;padding:9px 2px;min-height:44px;border-bottom:1px solid var(--line);}
+.meal-row:last-child{border-bottom:none;}
+.meal-row .dot-status{width:19px;height:19px;border-radius:50%;border:2px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;}
+.meal-row.received .dot-status{background:var(--warn);border-color:var(--warn);color:var(--accent-ink);}
+.meal-row.leave .dot-status{border-color:var(--danger);}
+.meal-row.off .dot-status{border-color:var(--line);}
+.meal-row .nm{flex:1;}
+.meal-row.off .nm, .meal-row.leave .nm{color:var(--ink-dim);text-decoration:line-through;text-decoration-color:var(--line);}
+.meal-row .amt{font-size:13px;color:var(--ink-dim);}
+.meal-row .tag{font-size:11px;background:var(--surface-2);border-radius:10px;padding:2px 7px;color:var(--ink-dim);}
+.meal-row .more{background:none;border:none;color:var(--ink-dim);font-size:18px;padding:4px 6px;}
+
+/* generic list row (expense / trip / loan) */
+.item-row{padding:10px 2px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:flex-start;cursor:pointer;}
+.item-row:last-child{border-bottom:none;}
+.item-row .main{flex:1;min-width:0;}
+.item-row .title{font-weight:600;font-size:15px;}
+.item-row .sub{font-size:13.5px;color:var(--ink-dim);margin-top:3px;}
+.item-row .right{text-align:right;flex:none;}
+.item-row .amt{font-weight:700;font-size:14.5px;}
+.clip{color:var(--ink-dim);}
+.pill{display:inline-block;font-size:11px;border-radius:10px;padding:2px 8px;font-weight:600;}
+.pill.paid{background:var(--success-bg);color:var(--success);}
+.pill.unpaid{background:var(--danger-bg);color:var(--danger);}
+.pill.done{background:var(--success-bg);color:var(--success);}
+.pill.pending{background:var(--warn-bg);color:var(--warn);}
+
+.wage-row{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px dashed var(--line);margin-bottom:4px;}
+.wage-row .nm{flex:1;font-weight:600;font-size:14px;}
+.wage-row input.amt-inline{width:80px;text-align:right;padding:6px 8px;}
+.chk-btn{border:1px solid var(--line);background:var(--surface-2);border-radius:20px;padding:6px 12px;font-size:12.5px;font-weight:600;color:var(--ink-dim);white-space:nowrap;}
+.chk-btn.on{background:var(--success-bg);border-color:var(--success);color:var(--success);}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:var(--radius-md);padding:12px 16px;font-size:14.5px;font-weight:600;min-height:44px;width:100%;}
+.btn.primary{background:var(--accent);color:var(--accent-ink);}
+.btn.secondary{background:var(--surface-2);color:var(--ink);border:1px solid var(--line);}
+.btn.danger{background:var(--danger-bg);color:var(--danger);}
+.btn.ghost{background:none;color:var(--accent);}
+.btn:disabled{opacity:.42;}
+.btn.sm{width:auto;padding:9px 14px;min-height:38px;font-size:13.5px;}
+.btnrow{display:flex;gap:9px;margin-top:14px;}
+.btnrow .btn{flex:1;}
+
+/* forms */
+.field{margin-bottom:13px;}
+.field label{display:block;font-size:12.5px;color:var(--ink-dim);margin-bottom:5px;}
+.field-row{display:flex;gap:10px;}
+.field-row .field{flex:1;}
+.hint{font-size:13px;color:var(--ink-dim);margin-top:4px;line-height:1.5;}
+.hint.warn{color:var(--warn);}
+.err{font-size:12px;color:var(--danger);margin-top:4px;}
+.checkline{display:flex;align-items:center;gap:8px;font-size:13.5px;padding:4px 0;}
+.checkline input{width:auto;}
+.seg{display:flex;background:var(--surface-2);border-radius:20px;padding:3px;gap:2px;}
+.seg button{flex:1;background:none;border:none;border-radius:17px;padding:8px 4px;font-size:13px;color:var(--ink-dim);font-weight:600;}
+.seg button.on{background:var(--surface);color:var(--accent);box-shadow:var(--shadow);}
+.chipwrap{display:flex;flex-wrap:wrap;gap:7px;}
+.chip{background:var(--surface-2);border:1px solid var(--line);border-radius:20px;padding:8px 13px;font-size:13px;font-weight:600;}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.checkrow{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line);}
+.checkrow input{width:auto;}
+.checkrow label{flex:1;font-size:14px;}
+.splitbar{display:flex;justify-content:space-between;align-items:center;border-radius:var(--radius-sm);padding:9px 12px;font-size:13.5px;font-weight:600;margin:10px 0;}
+.splitbar.ok{background:var(--success-bg);color:var(--success);}
+.splitbar.bad{background:var(--danger-bg);color:var(--danger);}
+.photowrap{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+.photothumb{position:relative;width:64px;height:64px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--line);}
+.photothumb img{width:100%;height:100%;object-fit:cover;}
+.photothumb .rm{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;line-height:1;}
+.addphoto{width:64px;height:64px;border-radius:var(--radius-sm);border:1px dashed var(--line);background:none;color:var(--ink-dim);font-size:22px;}
+
+/* diff result */
+.diffbox{text-align:center;padding:18px 0 6px;}
+.diffbox .lbl{font-size:12.5px;color:var(--ink-dim);}
+.diffbox .val{font-size:26px;font-weight:800;margin-top:4px;}
+.diffbox.ok .val{color:var(--success);}
+.diffbox.over .val{color:var(--info);}
+.diffbox.under .val{color:var(--danger);}
+.diffbox.incomplete .val{color:var(--ink-dim);font-size:15px;font-weight:600;}
+
+/* sheet / modal */
+#sheet-backdrop{position:fixed;inset:0;background:rgba(20,18,14,.42);z-index:49;opacity:0;pointer-events:none;transition:opacity .18s;}
+#sheet-backdrop.show{opacity:1;pointer-events:auto;}
+#sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;max-width:560px;margin:0 auto;
+  background:var(--surface);border-radius:20px 20px 0 0;
+  max-height:88vh;display:flex;flex-direction:column;
+  transform:translateY(100%);transition:transform .22s cubic-bezier(.32,.72,0,1);
+  padding-bottom:var(--safe-b);
+}
+#sheet.show{transform:translateY(0);}
+.sheet-handle{width:36px;height:4px;background:var(--line);border-radius:3px;margin:9px auto 2px;}
+.sheet-tear{height:1px;border-top:1px dashed var(--line);margin:0 20px;}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:12px 18px 6px;}
+.sheet-head h3{font-size:16px;margin:0;}
+.sheet-head .x{background:none;border:none;font-size:20px;color:var(--ink-dim);padding:4px 8px;}
+.sheet-body{overflow-y:auto;padding:6px 18px 22px;-webkit-overflow-scrolling:touch;}
+
+/* simple full-screen confirm dialog */
+#dialog-backdrop{position:fixed;inset:0;background:rgba(20,18,14,.5);z-index:59;display:none;align-items:flex-end;justify-content:center;}
+#dialog-backdrop.show{display:flex;}
+#dialog{background:var(--surface);border-radius:18px;max-width:480px;width:calc(100% - 32px);margin:0 auto 32px;padding:18px;max-height:75vh;overflow-y:auto;}
+#dialog h3{margin:2px 0 10px;font-size:16px;}
+#dialog .issue{font-size:13.5px;padding:5px 0;color:var(--ink-dim);}
+#dialog .issue b{color:var(--ink);}
+
+/* history */
+.hist-filters{display:flex;gap:8px;margin:10px 0 12px;}
+.hist-row{display:flex;justify-content:space-between;align-items:center;padding:11px 2px;border-bottom:1px solid var(--line);}
+.hist-row .d{font-weight:600;font-size:14px;}
+.hist-row .sub{font-size:12px;color:var(--ink-dim);margin-top:2px;}
+.hist-row .badges{text-align:right;}
+.badge-ok{color:var(--success);font-weight:700;font-size:13px;}
+.badge-under{color:var(--danger);font-weight:700;font-size:13px;}
+.badge-over{color:var(--info);font-weight:700;font-size:13px;}
+.badge-open{color:var(--ink-dim);font-weight:600;font-size:13px;}
+
+/* summary */
+.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden;margin:12px 0;}
+.stat{background:var(--surface);padding:12px 13px;}
+.stat .k{font-size:11.5px;color:var(--ink-dim);}
+.stat .v{font-size:18px;font-weight:700;margin-top:3px;}
+.stat .v small{font-size:11.5px;font-weight:500;color:var(--ink-dim);}
+.toprow{display:flex;justify-content:space-between;font-size:13.5px;padding:7px 0;border-bottom:1px solid var(--line);}
+.chart{margin:10px 0;}
+.chart svg{width:100%;display:block;}
+.perbar{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--line);}
+
+/* settings */
+.staffgrp{margin-bottom:6px;}
+.staffrow{display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid var(--line);}
+.staffrow .nm{flex:1;font-size:14px;}
+.staffrow.inactive .nm{color:var(--ink-dim);text-decoration:line-through;}
+.staffrow .ord{display:flex;flex-direction:column;}
+.staffrow .ord button{background:none;border:none;color:var(--ink-dim);font-size:13px;padding:1px 5px;}
+.settingsrow{display:flex;justify-content:space-between;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line);gap:12px;}
+.settingsrow label{font-size:14px;flex:1;}
+.settingsrow input,.settingsrow select{width:120px;text-align:right;}
+.daychip-wrap{display:flex;gap:5px;flex:none;}
+.daychip{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);font-size:12px;color:var(--ink-dim);}
+.daychip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+.backup-note{font-size:12.5px;color:var(--ink-dim);line-height:1.6;background:var(--surface-2);border-radius:var(--radius-md);padding:12px;margin-top:6px;}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(72px + var(--safe-b));background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:24px;font-size:13.5px;z-index:80;opacity:0;transition:opacity .2s, bottom .2s;pointer-events:none;}
+.toast.show{opacity:1;}
+h1.pagetitle{font-size:19px;margin:14px 0 4px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="banners"></div>
+  <header class="topbar">
+    <div class="datenav" id="nav-today-only">
+      <button id="prevday" aria-label="วันก่อนหน้า">‹</button>
+      <div class="datelabel-wrap">
+        <div class="datelabel" id="datelabel"><div class="d" id="datelabel-d">—</div><div class="w" id="datelabel-w">—</div></div>
+        <input type="date" id="datepicker" aria-label="เลือกวันที่">
+      </div>
+      <button id="nextday" aria-label="วันถัดไป">›</button>
+    </div>
+    <button class="today-btn" id="gotoday">วันนี้</button>
+  </header>
+
+  <main>
+    <section class="view active" id="view-today"></section>
+    <section class="view" id="view-history">
+      <h1 class="pagetitle">ประวัติ</h1>
+      <div class="hist-filters">
+        <button class="chip" id="filt-diff" data-on="0">เฉพาะวันที่ไม่ตรง</button>
+        <button class="chip" id="filt-open" data-on="0">เฉพาะวันที่ยังไม่ปิด</button>
+      </div>
+      <div id="hist-list"></div>
+    </section>
+    <section class="view" id="view-summary">
+      <h1 class="pagetitle">สรุป</h1>
+      <div class="seg" id="sum-period">
+        <button data-p="week" class="on">สัปดาห์นี้</button>
+        <button data-p="month">เดือนนี้</button>
+        <button data-p="lastmonth">เดือนก่อน</button>
+        <button data-p="custom">กำหนดเอง</button>
+      </div>
+      <div id="sum-custom-range" class="field-row hide" style="margin-top:10px;">
+        <div class="field"><label>จากวันที่</label><input type="date" id="sum-from"></div>
+        <div class="field"><label>ถึงวันที่</label><input type="date" id="sum-to"></div>
+      </div>
+      <div id="sum-body"></div>
+    </section>
+    <section class="view" id="view-settings">
+      <h1 class="pagetitle">ตั้งค่า</h1>
+      <div id="settings-body"></div>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button data-tab="today" class="active"><span class="ic">📋</span>วันนี้<span class="dot hide" id="dot-today"></span></button>
+    <button data-tab="history"><span class="ic">🗂️</span>ประวัติ</button>
+    <button data-tab="summary"><span class="ic">📊</span>สรุป</button>
+    <button data-tab="settings"><span class="ic">⚙️</span>ตั้งค่า</button>
+  </nav>
+</div>
+
+<div id="sheet-backdrop"></div>
+<div id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-tear"></div>
+  <div class="sheet-head"><h3 id="sheet-title"></h3><button class="x" id="sheet-close">✕</button></div>
+  <div class="sheet-body" id="sheet-body"></div>
+</div>
+
+<div id="dialog-backdrop"><div id="dialog"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== constants & state ===================== */
+const DB_NAME='resto-daily-log', DB_VER=1;
+const THAI_WD=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const THAI_WD_S=['อา','จ','อ','พ','พฤ','ศ','ส'];
+const THAI_MO=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const DEFAULT_SETTINGS={id:'main',defaultMeal:50,defaultFloat:3000,parkingWage:200,
+  parkingWageDays:[2,3,4,5,6],parkingMealDays:[0],parkingMealCount:2,closedDays:[1],
+  reminderTime:'19:30',lastBackupAt:null};
+const SEED_STAFF=[
+  ...['แก๊ง','อ้น','ไปท์','นนท์','นู','โอม'].map((n,i)=>({name:n,group:'front',order:i})),
+  ...['ส้ม','แฮก','เต่า','อาเก็บ','โนว่า','ลุงหนุ่ม','พี่มุ่ย','เล็ก','มีนา'].map((n,i)=>({name:n,group:'kitchen',order:i})),
+];
+let DB=null, SETTINGS=null, STAFF=[];
+let curTab='today', curDate=todayISO();
+let sumPeriod='week', sumFrom=null, sumTo=null;
+let histFiltDiff=false, histFiltOpen=false;
+let unlockedDayId=null; // day currently unlocked for post-close editing
+let notifTimer=null;
+let lastKnownToday=todayISO(); // used to detect the calendar date rolling over while the app stays open
+
+/* ===================== utils ===================== */
+function uuid(){ return 'id-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10); }
+function nowISO(){ return new Date().toISOString(); }
+function todayISO(){ return localISOFromDate(new Date()); }
+function localISOFromDate(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function dateFromISO(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+function addDaysISO(s,n){ const d=dateFromISO(s); d.setDate(d.getDate()+n); return localISOFromDate(d); }
+function dowOf(s){ return dateFromISO(s).getDay(); }
+function fmtMoney(n){ n=Math.round(n||0); return n.toLocaleString('en-US'); }
+function fmtDateThaiShort(s){ const d=dateFromISO(s); return `${d.getDate()} ${THAI_MO[d.getMonth()]} ${d.getFullYear()+543}`; }
+function fmtDateThaiFull(s){ const d=dateFromISO(s); return `${THAI_WD[d.getDay()]}ที่ ${d.getDate()} ${THAI_MO[d.getMonth()]} ${d.getFullYear()+543}`; }
+function fmtTime(iso){ if(!iso)return ''; const d=new Date(iso); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function clampInt(v,min=0){ v=parseInt(v,10); if(isNaN(v))v=0; if(v<min)v=min; return v; }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),2200); }
+function el(tag,cls,html){ const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
+function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ===================== IndexedDB layer ===================== */
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(DB_NAME,DB_VER);
+    req.onupgradeneeded=(e)=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains('settings')) db.createObjectStore('settings',{keyPath:'id'});
+      if(!db.objectStoreNames.contains('staff')) db.createObjectStore('staff',{keyPath:'id'});
+      if(!db.objectStoreNames.contains('days')){ const s=db.createObjectStore('days',{keyPath:'id'}); s.createIndex('date','date',{unique:true}); }
+      if(!db.objectStoreNames.contains('mealEntries')){ const s=db.createObjectStore('mealEntries',{keyPath:'id'}); s.createIndex('dayId','dayId',{unique:false}); }
+      if(!db.objectStoreNames.contains('mealTrips')){ const s=db.createObjectStore('mealTrips',{keyPath:'id'}); s.createIndex('dayId','dayId',{unique:false}); }
+      if(!db.objectStoreNames.contains('expenses')){ const s=db.createObjectStore('expenses',{keyPath:'id'}); s.createIndex('dayId','dayId',{unique:false}); }
+      if(!db.objectStoreNames.contains('loans')){ const s=db.createObjectStore('loans',{keyPath:'id'}); s.createIndex('dayId','dayId',{unique:false}); }
+      if(!db.objectStoreNames.contains('receivables')){ const s=db.createObjectStore('receivables',{keyPath:'id'}); s.createIndex('dayId','dayId',{unique:false}); }
+      if(!db.objectStoreNames.contains('attachments')){ const s=db.createObjectStore('attachments',{keyPath:'id'}); s.createIndex('parentId','parentId',{unique:false}); }
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+function tx(stores,mode='readonly'){ return DB.transaction(stores,mode); }
+function reqP(req){ return new Promise((res,rej)=>{ req.onsuccess=()=>res(req.result); req.onerror=()=>rej(req.error); }); }
+function dbGet(store,id){ return reqP(tx([store]).objectStore(store).get(id)); }
+function dbGetAll(store){ return reqP(tx([store]).objectStore(store).getAll()); }
+function dbGetByIndex(store,idx,val){ return reqP(tx([store]).objectStore(store).index(idx).getAll(val)); }
+function dbPut(store,obj){ return reqP(tx([store],'readwrite').objectStore(store).put(obj)); }
+function dbDelete(store,id){ return reqP(tx([store],'readwrite').objectStore(store).delete(id)); }
+async function dbGetByDate(dateStr){ const r=await reqP(tx(['days']).objectStore('days').index('date').get(dateStr)); return r; }
+
+/* ===================== bootstrap ===================== */
+async function boot(){
+  DB=await openDB();
+  SETTINGS=await dbGet('settings','main');
+  if(!SETTINGS){ SETTINGS={...DEFAULT_SETTINGS}; await dbPut('settings',SETTINGS); }
+  STAFF=await dbGetAll('staff');
+  if(STAFF.length===0){
+    for(const s of SEED_STAFF){ const rec={id:uuid(),name:s.name,group:s.group,type:'regular',active:true,order:s.order}; await dbPut('staff',rec); }
+    STAFF=await dbGetAll('staff');
+  }
+  if(navigator.storage && navigator.storage.persist){ try{ await navigator.storage.persist(); }catch(e){} }
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js').then(reg=>{
+      reg.update().catch(()=>{}); // check for a newer sw.js right away
+      document.addEventListener('visibilitychange',()=>{ if(!document.hidden) reg.update().catch(()=>{}); });
+    }).catch(()=>{});
+    // if a new service worker takes over (because sw.js itself changed), reload once so
+    // the person actually sees the new version instead of the one already in memory
+    let swRefreshed=false;
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(swRefreshed) return; swRefreshed=true; location.reload();
+    });
+  }
+  bindShell();
+  await gotoTab('today');
+  await renderDate(curDate);
+  startNotifLoop();
+}
+
+async function refreshStaff(){ STAFF=await dbGetAll('staff'); }
+async function refreshSettings(){ SETTINGS=await dbGet('settings','main'); }
+
+/* ===================== day model ===================== */
+function isClosedWeekday(dateStr){ return SETTINGS.closedDays.includes(dowOf(dateStr)); }
+
+async function createDay(dateStr,{special=false}={}){
+  const day={id:uuid(),date:dateStr,float:SETTINGS.defaultFloat,floatNote:'',
+    setAside:SETTINGS.defaultFloat,remainingCash:null,posCash:null,status:'open',
+    closedAt:null,isSpecialOpen:special,note:'',editLog:[]};
+  await dbPut('days',day);
+  const dow=dowOf(dateStr);
+  const regulars=STAFF.filter(s=>s.type==='regular'&&s.active);
+  for(const s of regulars){
+    await dbPut('mealEntries',{id:uuid(),dayId:day.id,staffId:s.id,nameSnapshot:s.name,group:s.group,status:'pending',amount:SETTINGS.defaultMeal,tripId:null});
+  }
+  if(SETTINGS.parkingMealDays.includes(dow)){
+    for(let i=1;i<=SETTINGS.parkingMealCount;i++){
+      await dbPut('mealEntries',{id:uuid(),dayId:day.id,staffId:null,nameSnapshot:`โบกรถ ${i}`,group:'parking',status:'pending',amount:SETTINGS.defaultMeal,tripId:null});
+    }
+  }
+  if(SETTINGS.parkingWageDays.includes(dow)){
+    await dbPut('expenses',{id:uuid(),dayId:day.id,name:'ค่าจ้างโบกรถ',amount:SETTINGS.parkingWage,taken:null,change:null,category:'parkingWage',paid:false,time:nowISO(),attachmentIds:[]});
+  }
+  return day;
+}
+
+async function dayCtx(dayId){
+  const [meals,trips,expenses,loans,recv]=await Promise.all([
+    dbGetByIndex('mealEntries','dayId',dayId),
+    dbGetByIndex('mealTrips','dayId',dayId),
+    dbGetByIndex('expenses','dayId',dayId),
+    dbGetByIndex('loans','dayId',dayId),
+    dbGetByIndex('receivables','dayId',dayId),
+  ]);
+  return {meals,trips,expenses,loans,recv};
+}
+function mealTotal(meals){ return meals.filter(m=>m.status==='received').reduce((a,m)=>a+m.amount,0); }
+function expenseTotal(expenses){
+  let t=0;
+  for(const e of expenses){ if(e.category==='parkingWage'){ if(e.paid) t+=e.amount; } else t+=e.amount; }
+  return t;
+}
+function outstanding(list,flagField){ return list.filter(x=>!x[flagField]).reduce((a,x)=>a+x.amount,0); }
+
+/* ===================== image compress ===================== */
+function fileToCompressedBlob(file){
+  return new Promise((resolve,reject)=>{
+    const img=new Image(); const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      let w=img.width,h=img.height; const max=1280;
+      if(w>max||h>max){ if(w>h){ h=Math.round(h*max/w); w=max; } else { w=Math.round(w*max/h); h=max; } }
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      c.toBlob(b=>{ URL.revokeObjectURL(url); resolve(b); },'image/jpeg',0.7);
+    };
+    img.onerror=reject;
+    img.src=url;
+  });
+}
+async function saveAttachments(files,parentType,parentId){
+  const ids=[];
+  for(const f of files){
+    const blob=await fileToCompressedBlob(f);
+    const id=uuid();
+    await dbPut('attachments',{id,blob,mime:'image/jpeg',parentType,parentId});
+    ids.push(id);
+  }
+  return ids;
+}
+async function deleteAttachments(ids){ for(const id of (ids||[])) await dbDelete('attachments',id); }
+
+/* ===================== shell: tabs, date nav, sheet, dialog ===================== */
+function bindShell(){
+  document.querySelectorAll('nav.tabbar button').forEach(b=>b.addEventListener('click',()=>gotoTab(b.dataset.tab)));
+  document.getElementById('prevday').onclick=()=>renderDate(addDaysISO(curDate,-1));
+  document.getElementById('nextday').onclick=()=>renderDate(addDaysISO(curDate,1));
+  document.getElementById('gotoday').onclick=()=>renderDate(todayISO());
+  document.getElementById('datepicker').addEventListener('change',e=>{ if(e.target.value) renderDate(e.target.value); });
+  document.getElementById('sheet-close').onclick=closeSheet;
+  document.getElementById('sheet-backdrop').onclick=closeSheet;
+  document.getElementById('filt-diff').onclick=(e)=>{ histFiltDiff=!histFiltDiff; e.target.dataset.on=histFiltDiff?'1':'0'; e.target.classList.toggle('on',histFiltDiff); renderHistory(); };
+  document.getElementById('filt-open').onclick=(e)=>{ histFiltOpen=!histFiltOpen; e.target.dataset.on=histFiltOpen?'1':'0'; e.target.classList.toggle('on',histFiltOpen); renderHistory(); };
+  document.querySelectorAll('#sum-period button').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('#sum-period button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+    sumPeriod=b.dataset.p;
+    document.getElementById('sum-custom-range').classList.toggle('hide',sumPeriod!=='custom');
+    renderSummary();
+  }));
+  document.getElementById('sum-from').addEventListener('change',e=>{ sumFrom=e.target.value; renderSummary(); });
+  document.getElementById('sum-to').addEventListener('change',e=>{ sumTo=e.target.value; renderSummary(); });
+}
+async function gotoTab(name){
+  curTab=name;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('nav.tabbar button').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
+  document.getElementById('nav-today-only').style.visibility = name==='today'?'visible':'hidden';
+  document.getElementById('gotoday').style.visibility = name==='today'?'visible':'hidden';
+  if(name==='today') await renderToday();
+  if(name==='history') await renderHistory();
+  if(name==='summary') await renderSummary();
+  if(name==='settings') await renderSettings();
+}
+async function renderDate(dateStr){
+  curDate=dateStr;
+  document.getElementById('datelabel-d').textContent=fmtDateThaiShort(dateStr);
+  document.getElementById('datelabel-w').textContent=THAI_WD[dowOf(dateStr)];
+  document.getElementById('datepicker').value=dateStr;
+  if(curTab==='today') await renderToday();
+  await refreshTodayDot();
+}
+
+/* bottom sheet */
+function openSheet(title,bodyBuilder){
+  document.getElementById('sheet-title').textContent=title;
+  const body=document.getElementById('sheet-body');
+  body.innerHTML='';
+  bodyBuilder(body);
+  document.getElementById('sheet-backdrop').classList.add('show');
+  document.getElementById('sheet').classList.add('show');
+}
+function closeSheet(){
+  document.getElementById('sheet-backdrop').classList.remove('show');
+  document.getElementById('sheet').classList.remove('show');
+}
+function openDialog(html){
+  document.getElementById('dialog').innerHTML=html;
+  document.getElementById('dialog-backdrop').classList.add('show');
+}
+function closeDialog(){ document.getElementById('dialog-backdrop').classList.remove('show'); }
+document.addEventListener('DOMContentLoaded',()=>{});
+
+/* ===================== TODAY VIEW ===================== */
+let CUR_DAY=null, CUR_CTX=null;
+
+async function renderToday(){
+  const host=document.getElementById('view-today');
+  const dateStr=curDate;
+  if(isClosedWeekday(dateStr)){
+    const existing=await dbGetByDate(dateStr);
+    if(!existing){
+      host.innerHTML=`<div style="padding:60px 10px;text-align:center;color:var(--ink-dim);">
+        <div style="font-size:38px;margin-bottom:10px;">🚪</div>
+        <div style="font-size:15px;margin-bottom:18px;">วัน${THAI_WD[dowOf(dateStr)]}ร้านหยุด</div>
+        <button class="btn secondary" id="force-open" style="width:auto;padding:11px 20px;">เปิดร้านวันนี้ (กรณีพิเศษ)</button>
+      </div>`;
+      document.getElementById('force-open').onclick=async()=>{ await createDay(dateStr,{special:true}); await renderToday(); await refreshTodayDot(); };
+      return;
+    }
+  }
+  let day=await dbGetByDate(dateStr);
+  if(!day) day=await createDay(dateStr,{special:false});
+  CUR_DAY=day;
+  CUR_CTX=await dayCtx(day.id);
+  paintToday();
+  await refreshTodayDot();
+}
+
+function groupMeals(meals){
+  const g={front:[],kitchen:[],parking:[]};
+  for(const m of meals){ if(g[m.group]) g[m.group].push(m); }
+  return g;
+}
+
+function closeCheckIssues(day,ctx){
+  const issues=[];
+  const pending=ctx.meals.filter(m=>m.status==='pending');
+  if(pending.length) issues.push({type:'meal',text:`ยังมีคนรอรับค่าข้าว: ${pending.map(m=>m.nameSnapshot).join(', ')}`});
+  const unpaidWage=ctx.expenses.filter(e=>e.category==='parkingWage'&&!e.paid);
+  for(const w of unpaidWage) issues.push({type:'wage',text:`ค่าจ้างโบกรถยังไม่จ่าย (${fmtMoney(w.amount)} บาท)`});
+  const unLoans=ctx.loans.filter(l=>!l.repaid);
+  for(const l of unLoans) issues.push({type:'loan',text:`เงินยืมยังไม่คืน: ${l.lender} (${fmtMoney(l.amount)})`});
+  const unRecv=ctx.recv.filter(r=>!r.returned);
+  for(const r of unRecv) issues.push({type:'recv',text:`ติดร้านยังไม่ได้คืน: ${r.borrower} (${fmtMoney(r.amount)})`});
+  return issues;
+}
+
+// short "don't forget" list — same underlying conditions as closeCheckIssues, but terse
+// (used by the overview card, and by the today-tab reminder banner)
+function pendingIssuesFor(ctx){
+  const out=[];
+  const pending=ctx.meals.filter(m=>m.status==='pending');
+  if(pending.length) out.push({key:'meal',text:`ยังรอรับค่าข้าว ${pending.length} คน`});
+  const wage=ctx.expenses.find(e=>e.category==='parkingWage'&&!e.paid);
+  if(wage) out.push({key:'expense',text:`ค่าจ้างโบกรถยังไม่จ่าย ${fmtMoney(wage.amount)} บาท`});
+  for(const l of ctx.loans.filter(x=>!x.repaid)) out.push({key:'debt',text:`ยังไม่คืนเงินยืม: ${l.lender} ${fmtMoney(l.amount)}`});
+  for(const r of ctx.recv.filter(x=>!x.returned)) out.push({key:'debt',text:`ยังไม่ได้เงินคืน: ${r.borrower} ${fmtMoney(r.amount)}`});
+  return out;
+}
+
+// which sections are expanded — persists across re-renders (captured from the live DOM
+// before each repaint) and across date navigation, so opening a section stays open.
+let sectionOpen={meal:true,trip:true,expense:true,debt:false,closing:false,note:false};
+function captureOpenStates(){
+  document.querySelectorAll('#view-today details[data-acc]').forEach(d=>{ sectionOpen[d.dataset.acc]=d.open; });
+}
+function jumpToSection(key){
+  sectionOpen[key]=true;
+  paintToday();
+  requestAnimationFrame(()=>{
+    const t=document.querySelector(`#view-today details[data-acc="${key}"]`);
+    if(t) t.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+}
+
+function paintToday(){
+  captureOpenStates();
+  const host=document.getElementById('view-today');
+  const day=CUR_DAY, ctx=CUR_CTX;
+  const mt=mealTotal(ctx.meals), et=expenseTotal(ctx.expenses);
+  const locked = day.status==='closed' && unlockedDayId!==day.id;
+  const abnormalFloat = day.float!==SETTINGS.defaultFloat;
+  const O=(k)=>sectionOpen[k]?'open':'';
+
+  let html='';
+
+  /* ---------- overview card ---------- */
+  html+='<div class="overview">';
+  html+=`<div class="ov-totals">
+      <div class="ov-stat"><span class="k">ค่าข้าว</span><span class="v tnum">${fmtMoney(mt)}</span></div>
+      <div class="ov-divider"></div>
+      <div class="ov-stat"><span class="k">ค่าใช้จ่าย</span><span class="v tnum">${fmtMoney(et)}</span></div>
+    </div>`;
+  if(day.isSpecialOpen) html+=`<div class="ov-tag">🔓 เปิดร้านกรณีพิเศษ</div>`;
+  if(day.status==='closed'){
+    html+=`<div class="ov-closed">✅ ปิดยอดแล้ว เวลา ${fmtTime(day.closedAt)}${locked?'':' · กำลังแก้ไข'}</div>`;
+  } else {
+    const todo=pendingIssuesFor(ctx);
+    if(todo.length){
+      html+=`<div class="ov-todo"><div class="ov-todo-title">ห้ามลืมวันนี้</div>`;
+      html+=todo.map(i=>`<button class="ov-item" data-jump="${i.key}">${escapeHtml(i.text)}</button>`).join('');
+      html+=`</div>`;
+    } else {
+      html+=`<div class="ov-allgood">✅ วันนี้เรียบร้อย ไม่มีอะไรค้าง</div>`;
+    }
+  }
+  html+='</div>';
+
+  html+=`<div class="float-strip" id="float-strip">
+    <span>เงินตั้งต้นวันนี้${abnormalFloat?' <span class="abnormal-tag">· ไม่ปกติ</span>':''}</span>
+    <b class="tnum">${fmtMoney(day.float)} บาท</b>
+  </div>`;
+
+  /* ---------- ค่าข้าว ---------- */
+  const g=groupMeals(ctx.meals);
+  const rc=ctx.meals.filter(m=>m.status==='received').length;
+  html+=`<details class="acc" data-acc="meal" ${O('meal')}><summary>
+      <span class="acc-title">ค่าข้าว</span>
+      <span class="acc-sub">${ctx.meals.length? `ได้แล้ว ${rc}/${ctx.meals.length} คน · ${fmtMoney(mt)} บาท` : 'ยังไม่มีรายชื่อ'}</span>
+      <span class="acc-chevron">⌄</span></summary><div class="acc-body">`;
+  html+=locked?'':'<button class="btn secondary sm" id="add-person" style="margin-bottom:10px;">+ เพิ่มคน</button>';
+  const labels={front:'หน้าร้าน',kitchen:'ในครัว',parking:'โบกรถ'};
+  for(const key of ['front','kitchen','parking']){
+    const list=g[key];
+    if(key==='parking' && list.length===0) continue;
+    html+=`<div class="subgroup-label">${labels[key]}</div>`;
+    if(list.length===0) html+=`<div class="empty-hint">ไม่มีรายการ</div>`;
+    for(const m of list){
+      const statusLbl={pending:'',received:'✓',leave:'',off:''}[m.status];
+      html+=`<div class="meal-row ${m.status}" data-id="${m.id}">
+        <div class="dot-status" data-toggle="${m.id}">${statusLbl}</div>
+        <div class="nm">${escapeHtml(m.nameSnapshot)}</div>
+        ${m.status==='leave'?'<span class="tag">ลา</span>':''}${m.status==='off'?'<span class="tag">หยุด</span>':''}
+        ${m.amount!==SETTINGS.defaultMeal?`<span class="amt tnum">${fmtMoney(m.amount)}</span>`:''}
+        ${locked?'':`<button class="more" data-menu="${m.id}">⋯</button>`}
+      </div>`;
+    }
+  }
+  html+=`</div></details>`;
+
+  /* ---------- ซื้อข้าว ---------- */
+  const tripSpent=ctx.trips.reduce((a,t)=>a+t.spent,0);
+  html+=`<details class="acc" data-acc="trip" ${O('trip')}><summary>
+      <span class="acc-title">ซื้อข้าว</span>
+      <span class="acc-sub">${ctx.trips.length? `${ctx.trips.length} รอบ · ใช้ ${fmtMoney(tripSpent)} บาท` : 'ยังไม่มีรอบซื้อข้าว'}</span>
+      <span class="acc-chevron">⌄</span></summary><div class="acc-body">`;
+  html+=locked?'':'<button class="btn secondary sm" id="add-trip" style="margin-bottom:10px;">+ ซื้อข้าว</button>';
+  if(ctx.trips.length===0) html+=`<div class="empty-hint">ยังไม่มีรอบซื้อข้าว</div>`;
+  for(const t of ctx.trips){
+    const names=t.memberEntryIds.map(id=>{ const m=ctx.meals.find(x=>x.id===id); return m?m.nameSnapshot:'?'; }).join(' ');
+    html+=`<div class="item-row" data-trip="${t.id}"><div class="main"><div class="title tnum">เอาไป ${fmtMoney(t.taken)} ทอน ${fmtMoney(t.change)} = ใช้ ${fmtMoney(t.spent)}</div><div class="sub">${escapeHtml(names)} (${t.memberEntryIds.length} คน)${t.attachmentIds.length?' <span class="clip">📎</span>':''}</div></div></div>`;
+  }
+  html+=`</div></details>`;
+
+  /* ---------- ค่าใช้จ่าย ---------- */
+  const wage=ctx.expenses.find(e=>e.category==='parkingWage');
+  const general=ctx.expenses.filter(e=>e.category!=='parkingWage');
+  let expSub = `${general.length} รายการ · ${fmtMoney(et)} บาท`;
+  if(wage&&!wage.paid) expSub += ` · <span class="acc-sub-warn">ค่าจ้างโบกรถค้าง</span>`;
+  html+=`<details class="acc" data-acc="expense" ${O('expense')}><summary>
+      <span class="acc-title">ค่าใช้จ่าย</span>
+      <span class="acc-sub">${expSub}</span>
+      <span class="acc-chevron">⌄</span></summary><div class="acc-body">`;
+  if(wage){
+    html+=`<div class="wage-row"><div class="nm">${escapeHtml(wage.name)}</div>
+      <input class="amt-inline tnum" type="number" inputmode="numeric" value="${wage.amount}" data-wage-amt="${wage.id}" ${locked?'disabled':''}>
+      <button class="chk-btn ${wage.paid?'on':''}" data-wage-paid="${wage.id}" ${locked?'disabled':''}>${wage.paid?'จ่ายแล้ว ✓':'ยังไม่จ่าย'}</button>
+    </div>`;
+  } else if(!locked){
+    html+=`<button class="btn secondary sm" id="add-wage" style="margin-bottom:8px;">+ เพิ่มค่าจ้างโบกรถ</button>`;
+  }
+  html+=locked?'':'<button class="btn secondary sm" id="add-expense" style="margin:2px 0 10px;">+ ค่าใช้จ่าย</button>';
+  if(general.length===0) html+=`<div class="empty-hint">ไม่มีรายการ</div>`;
+  for(const e of general){
+    let line;
+    if(e.taken!=null && e.change!=null) line=`${escapeHtml(e.name)} ${fmtMoney(e.amount)} · เอาไป ${fmtMoney(e.taken)} ทอน ${fmtMoney(e.change)}`;
+    else line=`${escapeHtml(e.name)} ${fmtMoney(e.amount)}`;
+    html+=`<div class="item-row" data-expense="${e.id}"><div class="main"><div class="title">${line}${e.attachmentIds&&e.attachmentIds.length?' <span class="clip">📎</span>':''}</div></div></div>`;
+  }
+  html+=`</div></details>`;
+
+  /* ---------- เงินยืม / ติดร้าน ---------- */
+  const loanOut=outstanding(ctx.loans,'repaid'), recvOut=outstanding(ctx.recv,'returned');
+  const debtParts=[]; if(loanOut) debtParts.push(`ยืม ${fmtMoney(loanOut)}`); if(recvOut) debtParts.push(`ติดร้าน ${fmtMoney(recvOut)}`);
+  const debtSub = debtParts.length? debtParts.join(' · ') : ((ctx.loans.length||ctx.recv.length)?'เคลียร์ครบแล้ว':'ไม่มีรายการ');
+  html+=`<details class="acc" data-acc="debt" ${O('debt')}><summary>
+      <span class="acc-title">เงินยืม / ติดร้าน</span>
+      <span class="acc-sub">${debtSub}</span>
+      <span class="acc-chevron">⌄</span></summary><div class="acc-body">`;
+  html+=`<div class="subgroup-label">เงินยืม (ร้านยืมคนอื่น)</div>`;
+  html+=locked?'':'<button class="btn secondary sm" id="add-loan" style="margin-bottom:8px;">+ เงินยืม</button>';
+  if(ctx.loans.length===0) html+=`<div class="empty-hint">ไม่มีรายการ</div>`;
+  for(const l of ctx.loans){
+    html+=`<div class="item-row" data-loan="${l.id}"><div class="main"><div class="title">${escapeHtml(l.lender)} · ${fmtMoney(l.amount)}</div><div class="sub">${escapeHtml(l.reason||'')}</div></div><div class="right"><span class="pill ${l.repaid?'done':'pending'}">${l.repaid?'คืนแล้ว':'ยังไม่คืน'}</span></div></div>`;
+  }
+  html+=`<div class="subgroup-label" style="margin-top:14px;">ติดร้าน (คนอื่นยืมร้าน)</div>`;
+  html+=locked?'':'<button class="btn secondary sm" id="add-recv" style="margin-bottom:8px;">+ ติดร้าน</button>';
+  if(ctx.recv.length===0) html+=`<div class="empty-hint">ไม่มีรายการ</div>`;
+  for(const r of ctx.recv){
+    html+=`<div class="item-row" data-recv="${r.id}"><div class="main"><div class="title">${escapeHtml(r.borrower)} · ${fmtMoney(r.amount)}</div><div class="sub">${escapeHtml(r.reason||'')}</div></div><div class="right"><span class="pill ${r.returned?'done':'pending'}">${r.returned?'ได้คืนแล้ว':'ยังไม่ได้คืน'}</span></div></div>`;
+  }
+  html+=`</div></details>`;
+
+  /* ---------- ปิดยอด ---------- */
+  const closingCalc=closingCalcFor(day,mt,et);
+  html+=`<details class="acc" data-acc="closing" ${O('closing')}><summary>
+      <span class="acc-title">ปิดยอด</span>
+      <span class="acc-sub">${closingCalc.subLabel}</span>
+      <span class="acc-chevron">⌄</span></summary><div class="acc-body">`;
+  html+=renderClosingBody(day,ctx,mt,et,locked,closingCalc);
+  html+=`</div></details>`;
+
+  /* ---------- หมายเหตุ ---------- */
+  const noteSub = day.note ? (day.note.length>26? day.note.slice(0,26)+'…' : day.note) : 'ไม่มีหมายเหตุ';
+  html+=`<details class="acc" data-acc="note" ${O('note')}><summary>
+      <span class="acc-title">หมายเหตุ</span>
+      <span class="acc-sub">${escapeHtml(noteSub)}</span>
+      <span class="acc-chevron">⌄</span></summary><div class="acc-body">
+    <textarea id="day-note" rows="2" placeholder="พิมพ์หมายเหตุ..." ${locked?'disabled':''}>${escapeHtml(day.note||'')}</textarea>
+  </div></details>`;
+
+  if(day.status==='closed' && !locked){
+    html+=`<div class="btnrow"><button class="btn secondary" id="relock-day">เสร็จแล้ว ล็อกกลับ</button></div>`;
+  }
+
+  host.innerHTML=html;
+  bindTodayEvents(locked);
+}
+
+function closingCalcFor(day,mt,et){
+  const total=(day.remainingCash||0)+et+mt;
+  const hasAll = day.remainingCash!=null && day.posCash!=null;
+  const diff = hasAll ? total-day.posCash : null;
+  let subLabel;
+  if(day.status==='closed'){
+    subLabel = diff===0?'ปิดแล้ว · ✅ ตรง' : diff>0?`ปิดแล้ว · ⬆️ เกิน ${fmtMoney(diff)}` : diff<0?`ปิดแล้ว · ⬇️ ขาด ${fmtMoney(Math.abs(diff))}` : 'ปิดยอดแล้ว';
+  } else if(hasAll){
+    subLabel = diff===0?'✅ ตรง (ยังไม่ปิด)' : diff>0?`⬆️ เกิน ${fmtMoney(diff)} (ยังไม่ปิด)` : `⬇️ ขาด ${fmtMoney(Math.abs(diff))} (ยังไม่ปิด)`;
+  } else {
+    subLabel='ยังไม่ได้กรอกยอด';
+  }
+  return {total,hasAll,diff,subLabel};
+}
+
+function renderClosingBody(day,ctx,mt,et,locked,calc){
+  calc = calc || closingCalcFor(day,mt,et);
+  const {total,hasAll,diff}=calc;
+  const abn = day.setAside!==day.float;
+  let box;
+  if(!hasAll) box=`<div class="diffbox incomplete"><div class="lbl">ผลต่าง</div><div class="val">ยังกรอกไม่ครบ</div></div>`;
+  else if(diff===0) box=`<div class="diffbox ok"><div class="lbl">ผลต่าง</div><div class="val">✅ ตรง</div></div>`;
+  else if(diff>0) box=`<div class="diffbox over"><div class="lbl">ผลต่าง</div><div class="val">⬆️ เกิน ${fmtMoney(diff)}</div></div>`;
+  else box=`<div class="diffbox under"><div class="lbl">ผลต่าง</div><div class="val">⬇️ ขาด ${fmtMoney(Math.abs(diff))}</div></div>`;
+
+  return `
+  <div class="tally-row"><span class="k">เงินตั้งต้นวันนี้</span><span class="v tnum">${fmtMoney(day.float)}</span></div>
+  <div class="field"><label>1) เงินที่หยิบแยกออกก่อนนับ</label><input type="number" inputmode="numeric" id="in-setaside" class="tnum" value="${day.setAside}" ${locked?'disabled':''}></div>
+  ${abn?`<div class="hint warn">เงินที่แยกออกไม่เท่ากับเงินตั้งต้นของวันนี้ (${fmtMoney(day.float)}) ยอดอาจคลาดเคลื่อน</div>`:''}
+  <div class="field"><label>2) เงินสดหน้าร้านที่เหลือ</label><input type="number" inputmode="numeric" id="in-remaining" class="tnum" value="${day.remainingCash==null?'':day.remainingCash}" placeholder="กรอกจำนวนเงิน" ${locked?'disabled':''}></div>
+  <div class="tally-row"><span class="k">3) + ค่าใช้จ่ายรวม</span><span class="v tnum">${fmtMoney(et)}</span></div>
+  <div class="tally-row"><span class="k">4) + ค่าข้าวรวม</span><span class="v tnum">${fmtMoney(mt)}</span></div>
+  <div class="tally-row total"><span class="k">5) ยอดรวม</span><span class="v tnum">${fmtMoney(total)}</span></div>
+  <div class="field" style="margin-top:12px;"><label>6) ยอดเงินสดจาก POS</label><input type="number" inputmode="numeric" id="in-pos" class="tnum" value="${day.posCash==null?'':day.posCash}" placeholder="กรอกจำนวนเงิน" ${locked?'disabled':''}></div>
+  ${box}
+  ${day.status==='open'?`<div class="btnrow"><button class="btn primary" id="close-day-btn">ปิดยอดวันนี้</button></div>`
+    : (locked?`<div class="btnrow"><button class="btn secondary" id="edit-day-btn">แก้ไข</button></div>`:'')}
+  `;
+}
+
+async function saveDayField(field,value){
+  const day=CUR_DAY;
+  if(day.status==='closed' && unlockedDayId===day.id){
+    day.editLog=day.editLog||[];
+    day.editLog.push({at:nowISO(),field,from:day[field],to:value});
+  }
+  day[field]=value;
+  await dbPut('days',day);
+}
+
+function bindTodayEvents(locked){
+  const day=CUR_DAY, ctx=CUR_CTX;
+  document.querySelectorAll('[data-jump]').forEach(b=>b.onclick=()=>jumpToSection(b.dataset.jump));
+  if(!locked){
+    document.getElementById('float-strip').onclick=openFloatEditor;
+    const addP=document.getElementById('add-person'); if(addP) addP.onclick=openAddPersonSheet;
+    const addT=document.getElementById('add-trip'); if(addT) addT.onclick=()=>openTripSheet(null);
+    const addE=document.getElementById('add-expense'); if(addE) addE.onclick=()=>openExpenseSheet(null);
+    const addW=document.getElementById('add-wage'); if(addW) addW.onclick=addManualWage;
+    const addL=document.getElementById('add-loan'); if(addL) addL.onclick=()=>openLoanSheet(null);
+    const addR=document.getElementById('add-recv'); if(addR) addR.onclick=()=>openRecvSheet(null);
+    document.querySelectorAll('[data-toggle]').forEach(d=>d.onclick=()=>toggleMealStatus(d.dataset.toggle));
+    document.querySelectorAll('[data-menu]').forEach(d=>d.onclick=()=>openMealMenu(d.dataset.menu));
+    document.querySelectorAll('[data-wage-paid]').forEach(b=>b.onclick=()=>toggleWagePaid(b.dataset.wagePaid));
+    document.querySelectorAll('[data-wage-amt]').forEach(inp=>inp.onchange=()=>updateWageAmount(inp.dataset.wageAmt,inp.value));
+    document.querySelectorAll('[data-trip]').forEach(r=>r.onclick=()=>openTripSheet(r.dataset.trip));
+    document.querySelectorAll('[data-expense]').forEach(r=>r.onclick=()=>openExpenseSheet(r.dataset.expense));
+    document.querySelectorAll('[data-loan]').forEach(r=>r.onclick=()=>openLoanSheet(r.dataset.loan));
+    document.querySelectorAll('[data-recv]').forEach(r=>r.onclick=()=>openRecvSheet(r.dataset.recv));
+    const setA=document.getElementById('in-setaside'); if(setA) setA.onchange=async()=>{ await saveDayField('setAside',clampInt(setA.value)); paintToday(); };
+    const remC=document.getElementById('in-remaining'); if(remC) remC.onchange=async()=>{ await saveDayField('remainingCash',remC.value===''?null:clampInt(remC.value)); paintToday(); };
+    const posC=document.getElementById('in-pos'); if(posC) posC.onchange=async()=>{ await saveDayField('posCash',posC.value===''?null:clampInt(posC.value)); paintToday(); };
+    const noteEl=document.getElementById('day-note'); if(noteEl) noteEl.onchange=async()=>{ await saveDayField('note',noteEl.value); };
+    const closeBtn=document.getElementById('close-day-btn'); if(closeBtn) closeBtn.onclick=attemptCloseDay;
+    const relock=document.getElementById('relock-day'); if(relock) relock.onclick=()=>{ unlockedDayId=null; paintToday(); };
+  } else {
+    const editBtn=document.getElementById('edit-day-btn'); if(editBtn) editBtn.onclick=()=>{
+      openDialog(`<h3>แก้ไขวันที่ปิดยอดแล้ว</h3><p style="font-size:13.5px;color:var(--ink-dim);">วันนี้ปิดยอดไปแล้ว การแก้ไขจะถูกบันทึกลงประวัติการแก้ (editLog) ต้องการแก้ไขต่อหรือไม่?</p>
+      <div class="btnrow"><button class="btn secondary" id="dlg-cancel">ยกเลิก</button><button class="btn primary" id="dlg-ok">แก้ไข</button></div>`);
+      document.getElementById('dlg-cancel').onclick=closeDialog;
+      document.getElementById('dlg-ok').onclick=()=>{ unlockedDayId=day.id; closeDialog(); paintToday(); };
+    };
+  }
+}
+
+async function toggleMealStatus(id){
+  const m=CUR_CTX.meals.find(x=>x.id===id);
+  if(m.tripId){ toast('คนนี้อยู่ในรอบซื้อข้าว ต้องแก้รอบนั้นก่อน'); return; }
+  m.status = m.status==='received' ? 'pending' : 'received';
+  await dbPut('mealEntries',m);
+  paintToday();
+}
+
+function openMealMenu(id){
+  const m=CUR_CTX.meals.find(x=>x.id===id);
+  openDialog(`<h3>${escapeHtml(m.nameSnapshot)}</h3>
+    <div class="btnrow" style="flex-direction:column;">
+      <button class="btn secondary" data-act="pending">รอรับ</button>
+      <button class="btn secondary" data-act="received">ได้แล้ว</button>
+      <button class="btn secondary" data-act="leave">ลา</button>
+      <button class="btn secondary" data-act="off">หยุด</button>
+    </div>
+    <div class="field" style="margin-top:14px;"><label>จำนวนเงิน</label><input type="number" inputmode="numeric" id="m-amt" class="tnum" value="${m.amount}"></div>
+    <div class="btnrow"><button class="btn secondary" id="m-save-amt">บันทึกจำนวนเงิน</button></div>
+    <div class="btnrow"><button class="btn danger" id="m-del">ลบคนนี้ออกจากวันนี้</button></div>
+    <div class="btnrow"><button class="btn ghost" id="m-cancel">ปิด</button></div>`);
+  document.querySelectorAll('#dialog [data-act]').forEach(b=>b.onclick=async()=>{
+    if(m.tripId && b.dataset.act!=='received'){ toast('คนนี้อยู่ในรอบซื้อข้าว ต้องแก้รอบนั้นก่อน'); return; }
+    m.status=b.dataset.act; await dbPut('mealEntries',m); closeDialog(); await renderToday();
+  });
+  document.getElementById('m-save-amt').onclick=async()=>{
+    m.amount=clampInt(document.getElementById('m-amt').value); await dbPut('mealEntries',m); closeDialog(); await renderToday();
+  };
+  document.getElementById('m-del').onclick=async()=>{
+    if(m.tripId){ toast('คนนี้อยู่ในรอบซื้อข้าว ต้องแก้รอบนั้นก่อน'); return; }
+    await dbDelete('mealEntries',m.id); closeDialog(); await renderToday();
+  };
+  document.getElementById('m-cancel').onclick=closeDialog;
+}
+
+function openFloatEditor(){
+  const day=CUR_DAY;
+  openSheet('เงินตั้งต้นวันนี้',(body)=>{
+    body.innerHTML=`
+      <div class="field"><label>เงินตั้งต้น (บาท)</label><input type="number" inputmode="numeric" id="f-float" class="tnum" value="${day.float}"></div>
+      <div class="field"><label>เหตุผล (ถ้าไม่ใช่ค่าเริ่มต้น ${fmtMoney(SETTINGS.defaultFloat)})</label><input type="text" id="f-note" value="${escapeHtml(day.floatNote||'')}" placeholder="เช่น เบิกไม่ครบ"></div>
+      <div class="btnrow"><button class="btn primary" id="f-save">บันทึก</button></div>`;
+    document.getElementById('f-save').onclick=async()=>{
+      const val=clampInt(document.getElementById('f-float').value);
+      const note=document.getElementById('f-note').value.trim();
+      if(val!==SETTINGS.defaultFloat && !note){ toast('กรุณากรอกเหตุผลที่เงินตั้งต้นไม่ปกติ'); return; }
+      await saveDayField('float',val); await saveDayField('floatNote',note);
+      closeSheet(); paintToday();
+    };
+  });
+}
+
+async function toggleWagePaid(id){
+  const e=CUR_CTX.expenses.find(x=>x.id===id); e.paid=!e.paid; await dbPut('expenses',e); await renderToday();
+}
+async function updateWageAmount(id,val){
+  const e=CUR_CTX.expenses.find(x=>x.id===id); e.amount=clampInt(val); await dbPut('expenses',e); await renderToday();
+}
+async function addManualWage(){
+  await dbPut('expenses',{id:uuid(),dayId:CUR_DAY.id,name:'ค่าจ้างโบกรถ',amount:SETTINGS.parkingWage,taken:null,change:null,category:'parkingWage',paid:false,time:nowISO(),attachmentIds:[]});
+  await renderToday();
+}
+
+/* ===================== ADD PERSON ===================== */
+function openAddPersonSheet(){
+  const existingNames=new Set(CUR_CTX.meals.map(m=>m.nameSnapshot));
+  const frequent=STAFF.filter(s=>s.type==='frequent'&&s.active&&!existingNames.has(s.name));
+  openSheet('เพิ่มคน',(body)=>{
+    body.innerHTML=`
+      ${frequent.length?`<div class="subgroup-label">พาร์ทไทม์ที่เคยเพิ่ม</div>
+      <div class="chipwrap" id="freq-chips">${frequent.map(s=>`<button class="chip" data-freq="${s.id}">${escapeHtml(s.name)}</button>`).join('')}</div>`:''}
+      <div class="subgroup-label" style="margin-top:16px;">พิมพ์ชื่อใหม่</div>
+      <div class="field"><input type="text" id="np-name" placeholder="ชื่อ"></div>
+      <div class="field"><label>กลุ่ม</label><div class="seg" id="np-group">
+        <button data-g="front" class="on">หน้าร้าน</button><button data-g="kitchen">ในครัว</button><button data-g="parking">โบกรถ</button></div></div>
+      <label class="checkline"><input type="checkbox" id="np-save">บันทึกไว้ในรายชื่อพาร์ทไทม์</label>
+      <div class="btnrow"><button class="btn primary" id="np-add">เพิ่มคนนี้</button></div>
+      <div class="subgroup-label" style="margin-top:18px;">วางหลายชื่อ (1 บรรทัดต่อ 1 คน)</div>
+      <div class="field"><textarea id="np-multi" rows="3" placeholder="ชื่อ1&#10;ชื่อ2&#10;ชื่อ3"></textarea></div>
+      <div class="field"><label>กลุ่ม</label><div class="seg" id="np-multi-group">
+        <button data-g="front" class="on">หน้าร้าน</button><button data-g="kitchen">ในครัว</button><button data-g="parking">โบกรถ</button></div></div>
+      <div class="btnrow"><button class="btn secondary" id="np-multi-add">เพิ่มทั้งหมด</button></div>`;
+    let npGroup='front', npMultiGroup='front';
+    document.querySelectorAll('#np-group button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#np-group button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); npGroup=b.dataset.g; });
+    document.querySelectorAll('#np-multi-group button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#np-multi-group button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); npMultiGroup=b.dataset.g; });
+    document.querySelectorAll('[data-freq]').forEach(b=>b.onclick=async()=>{
+      const s=STAFF.find(x=>x.id===b.dataset.freq);
+      await addPersonToDay(s.name,s.group,s.id);
+      closeSheet(); await renderToday();
+    });
+    document.getElementById('np-add').onclick=async()=>{
+      let name=document.getElementById('np-name').value.trim();
+      if(!name){ toast('กรุณาพิมพ์ชื่อ'); return; }
+      name=dedupeName(name,existingNames);
+      let staffId=null;
+      if(document.getElementById('np-save').checked){
+        const rec={id:uuid(),name,group:npGroup,type:'frequent',active:true,order:STAFF.length};
+        await dbPut('staff',rec); STAFF.push(rec); staffId=rec.id;
+      }
+      await addPersonToDay(name,npGroup,staffId);
+      closeSheet(); await renderToday();
+    };
+    document.getElementById('np-multi-add').onclick=async()=>{
+      const lines=document.getElementById('np-multi').value.split('\n').map(s=>s.trim()).filter(Boolean);
+      for(let name of lines){ name=dedupeName(name,existingNames); await addPersonToDay(name,npMultiGroup,null); }
+      closeSheet(); await renderToday();
+    };
+  });
+}
+function dedupeName(name,existingNames){
+  let out=name, n=2;
+  while(existingNames.has(out)){ out=name+n; n++; }
+  existingNames.add(out);
+  return out;
+}
+async function addPersonToDay(name,group,staffId){
+  await dbPut('mealEntries',{id:uuid(),dayId:CUR_DAY.id,staffId,nameSnapshot:name,group,status:'pending',amount:SETTINGS.defaultMeal,tripId:null});
+}
+
+/* ===================== PHOTO PICKER (shared) ===================== */
+function makePhotoPicker(mountEl,existingIds){
+  const state={existingIds:[...(existingIds||[])],removedIds:[],newFiles:[]};
+  async function refresh(){
+    mountEl.innerHTML='';
+    for(const id of state.existingIds){
+      const att=await dbGet('attachments',id);
+      if(!att) continue;
+      const url=URL.createObjectURL(att.blob);
+      const d=el('div','photothumb',`<img src="${url}"><button class="rm" data-rm-ex="${id}">✕</button>`);
+      mountEl.appendChild(d);
+    }
+    state.newFiles.forEach((f,i)=>{
+      const url=URL.createObjectURL(f);
+      const d=el('div','photothumb',`<img src="${url}"><button class="rm" data-rm-new="${i}">✕</button>`);
+      mountEl.appendChild(d);
+    });
+    const addBtn=el('button','addphoto','＋'); addBtn.type='button';
+    const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.multiple=true; inp.style.display='none';
+    inp.onchange=()=>{ for(const f of inp.files) state.newFiles.push(f); refresh(); };
+    addBtn.onclick=()=>inp.click();
+    mountEl.appendChild(addBtn); mountEl.appendChild(inp);
+    mountEl.querySelectorAll('[data-rm-ex]').forEach(b=>b.onclick=()=>{ const id=b.dataset.rmEx; state.existingIds=state.existingIds.filter(x=>x!==id); state.removedIds.push(id); refresh(); });
+    mountEl.querySelectorAll('[data-rm-new]').forEach(b=>b.onclick=()=>{ const i=+b.dataset.rmNew; state.newFiles.splice(i,1); refresh(); });
+  }
+  refresh();
+  return {
+    state,
+    async commit(parentType,parentId){
+      await deleteAttachments(state.removedIds);
+      const newIds=await saveAttachments(state.newFiles,parentType,parentId);
+      return [...state.existingIds,...newIds];
+    }
+  };
+}
+
+/* ===================== MEAL TRIP ===================== */
+function openTripSheet(tripId){
+  const editing = !!tripId;
+  const trip = editing ? CUR_CTX.trips.find(t=>t.id===tripId) : null;
+  // selectable = pending entries, plus (if editing) entries already in this trip
+  const selectable = CUR_CTX.meals.filter(m=> m.status==='pending' || (editing && m.tripId===tripId));
+  const order = editing ? [...trip.memberEntryIds] : [];
+  const selected = new Set(editing ? trip.memberEntryIds : []);
+  const perPerson = {};
+  if(editing){ selected.forEach(id=>{ /* infer from trip? we stored total per-person only implicitly; reconstruct even split fallback */ }); }
+  selectable.forEach(m=>{ perPerson[m.id] = editing && selected.has(m.id) ? m.amount : SETTINGS.defaultMeal; });
+
+  openSheet(editing?'แก้ไขรอบซื้อข้าว':'ซื้อข้าว',(body)=>{
+    body.innerHTML=`
+      <div class="subgroup-label">เลือกคน</div>
+      <div id="trip-people">${selectable.map(m=>`
+        <div class="checkrow"><input type="checkbox" id="tp-${m.id}" ${selected.has(m.id)?'checked':''}>
+        <label for="tp-${m.id}">${escapeHtml(m.nameSnapshot)}</label></div>`).join('')}</div>
+      ${selectable.length===0?'<div class="empty-hint">ไม่มีคนที่สถานะรอรับ</div>':''}
+      <div class="field" style="margin-top:12px;"><label>ผู้ไปซื้อ (ไม่บังคับ)</label><input type="text" id="tp-buyer" value="${editing?escapeHtml(trip.buyer||''):''}"></div>
+      <div class="field-row">
+        <div class="field"><label>เอาไป</label><input type="number" inputmode="numeric" id="tp-taken" class="tnum" value="${editing?trip.taken:''}"></div>
+        <div class="field"><label>ทอน</label><input type="number" inputmode="numeric" id="tp-change" class="tnum" value="${editing?trip.change:''}"></div>
+      </div>
+      <div class="tally-row"><span class="k">ใช้จริง</span><span class="v tnum" id="tp-spent">0</span></div>
+      <div class="subgroup-label" style="display:flex;justify-content:space-between;align-items:center;">ยอดรายคน <button class="btn secondary sm" id="tp-split">แบ่งเท่ากัน</button></div>
+      <div id="tp-perperson"></div>
+      <div id="tp-checkbar"></div>
+      <div class="subgroup-label" style="margin-top:14px;">แนบรูป</div>
+      <div class="photowrap" id="tp-photos"></div>
+      <div class="btnrow"><button class="btn primary" id="tp-save" disabled>บันทึก</button></div>
+      ${editing?'<div class="btnrow"><button class="btn danger" id="tp-del">ลบรอบนี้</button></div>':''}
+    `;
+    const picker=makePhotoPicker(document.getElementById('tp-photos'), editing?trip.attachmentIds:[]);
+    const selOrder=[...order];
+
+    function currentSelected(){ return selectable.filter(m=>document.getElementById('tp-'+m.id).checked).map(m=>m.id); }
+    function spent(){ const t=clampInt(document.getElementById('tp-taken').value), c=clampInt(document.getElementById('tp-change').value); return Math.max(0,t-c); }
+    function renderPP(){
+      const ids=currentSelected();
+      // maintain selection order
+      for(const id of ids) if(!selOrder.includes(id)) selOrder.push(id);
+      for(let i=selOrder.length-1;i>=0;i--) if(!ids.includes(selOrder[i])) selOrder.splice(i,1);
+      const wrap=document.getElementById('tp-perperson');
+      wrap.innerHTML = selOrder.map(id=>{
+        const m=selectable.find(x=>x.id===id);
+        return `<div class="field-row" style="align-items:center;"><span style="flex:1;font-size:13.5px;">${escapeHtml(m.nameSnapshot)}</span>
+          <input type="number" inputmode="numeric" style="width:90px;" class="tnum pp-amt" data-pp="${id}" value="${perPerson[id]}"></div>`;
+      }).join('') || '<div class="empty-hint">เลือกคนก่อน</div>';
+      wrap.querySelectorAll('.pp-amt').forEach(inp=>inp.oninput=()=>{ perPerson[inp.dataset.pp]=clampInt(inp.value); checkBar(); });
+      checkBar();
+    }
+    function checkBar(){
+      const ids=selOrder; const sp=spent();
+      const sum=ids.reduce((a,id)=>a+(perPerson[id]||0),0);
+      document.getElementById('tp-spent').textContent=fmtMoney(sp);
+      const bar=document.getElementById('tp-checkbar');
+      const ok = ids.length>0 && sum===sp && sp>0;
+      bar.innerHTML = ids.length===0 ? '' : `<div class="splitbar ${ok?'ok':'bad'}">รวมรายคน ${fmtMoney(sum)} / ใช้จริง ${fmtMoney(sp)}${!ok?` (ต่าง ${fmtMoney(Math.abs(sum-sp))})`:''}</div>`;
+      document.getElementById('tp-save').disabled=!ok;
+    }
+    document.getElementById('tp-taken').oninput=checkBar;
+    document.getElementById('tp-change').oninput=checkBar;
+    selectable.forEach(m=>document.getElementById('tp-'+m.id).onchange=renderPP);
+    document.getElementById('tp-split').onclick=()=>{
+      const ids=selOrder, sp=spent(); if(ids.length===0) return;
+      const base=Math.floor(sp/ids.length), rem=sp-base*ids.length;
+      ids.forEach((id,i)=>{ perPerson[id]= i===ids.length-1 ? base+rem : base; });
+      renderPP();
+    };
+    renderPP();
+
+    document.getElementById('tp-save').onclick=async()=>{
+      const ids=selOrder;
+      const t=clampInt(document.getElementById('tp-taken').value), c=clampInt(document.getElementById('tp-change').value);
+      if(c>t){ toast('เงินทอนต้องไม่มากกว่าเงินที่เอาไป'); return; }
+      const attachmentIds=await picker.commit('mealTrip', tripId||('pending-'+uuid()));
+      let tid=tripId;
+      // revert previously-in-trip members no longer selected
+      if(editing){
+        for(const oldId of trip.memberEntryIds){
+          if(!ids.includes(oldId)){
+            const m=CUR_CTX.meals.find(x=>x.id===oldId);
+            m.status='pending'; m.amount=SETTINGS.defaultMeal; m.tripId=null; await dbPut('mealEntries',m);
+          }
+        }
+      }
+      const rec={id:tid||uuid(),dayId:CUR_DAY.id,buyer:document.getElementById('tp-buyer').value.trim(),
+        memberEntryIds:ids,taken:t,change:c,spent:t-c,time:editing?trip.time:nowISO(),attachmentIds};
+      await dbPut('mealTrips',rec);
+      for(const id of ids){
+        const m=CUR_CTX.meals.find(x=>x.id===id);
+        m.status='received'; m.amount=perPerson[id]; m.tripId=rec.id; await dbPut('mealEntries',m);
+      }
+      closeSheet(); await renderToday();
+    };
+    const delBtn=document.getElementById('tp-del');
+    if(delBtn) delBtn.onclick=async()=>{
+      for(const id of trip.memberEntryIds){
+        const m=CUR_CTX.meals.find(x=>x.id===id);
+        m.status='pending'; m.amount=SETTINGS.defaultMeal; m.tripId=null; await dbPut('mealEntries',m);
+      }
+      await deleteAttachments(trip.attachmentIds);
+      await dbDelete('mealTrips',trip.id);
+      closeSheet(); await renderToday();
+    };
+  });
+}
+
+/* ===================== EXPENSE ===================== */
+async function openExpenseSheet(expId){
+  const editing=!!expId;
+  const e = editing ? CUR_CTX.expenses.find(x=>x.id===expId) : null;
+  const allExp=await dbGetAll('expenses');
+  const names=[...new Set(allExp.filter(x=>x.category!=='parkingWage').map(x=>x.name))];
+  openSheet(editing?'แก้ไขค่าใช้จ่าย':'ค่าใช้จ่าย',(body)=>{
+    body.innerHTML=`
+      <datalist id="exp-names">${names.map(n=>`<option value="${escapeHtml(n)}">`).join('')}</datalist>
+      <div class="field"><label>ชื่อรายการ</label><input type="text" id="ex-name" list="exp-names" value="${editing?escapeHtml(e.name):''}" placeholder="เช่น แก๊ส"></div>
+      <div class="field-row">
+        <div class="field"><label>เอาไป (ไม่บังคับ)</label><input type="number" inputmode="numeric" id="ex-taken" class="tnum" value="${editing&&e.taken!=null?e.taken:''}"></div>
+        <div class="field"><label>ทอน (ไม่บังคับ)</label><input type="number" inputmode="numeric" id="ex-change" class="tnum" value="${editing&&e.change!=null?e.change:''}"></div>
+      </div>
+      <div class="field"><label>ยอดจ่ายจริง</label><input type="number" inputmode="numeric" id="ex-amount" class="tnum" value="${editing?e.amount:''}"></div>
+      <div class="hint warn hide" id="ex-warn">ยอดไม่ตรงกับ เอาไป − ทอน</div>
+      <div class="subgroup-label">แนบรูป</div>
+      <div class="photowrap" id="ex-photos"></div>
+      <div class="btnrow"><button class="btn primary" id="ex-save">บันทึก</button></div>
+      ${editing?'<div class="btnrow"><button class="btn danger" id="ex-del">ลบรายการนี้</button></div>':''}
+    `;
+    const picker=makePhotoPicker(document.getElementById('ex-photos'), editing?(e.attachmentIds||[]):[]);
+    let amtTouched=editing;
+    function recalc(){
+      const t=document.getElementById('ex-taken').value, c=document.getElementById('ex-change').value;
+      if(t!==''&&c!==''&&!amtTouched){ document.getElementById('ex-amount').value = Math.max(0,clampInt(t)-clampInt(c)); }
+      checkWarn();
+    }
+    function checkWarn(){
+      const t=document.getElementById('ex-taken').value, c=document.getElementById('ex-change').value, a=document.getElementById('ex-amount').value;
+      const warn=document.getElementById('ex-warn');
+      if(t!==''&&c!==''&&a!==''&&clampInt(a)!==(clampInt(t)-clampInt(c))) warn.classList.remove('hide'); else warn.classList.add('hide');
+    }
+    document.getElementById('ex-taken').oninput=recalc;
+    document.getElementById('ex-change').oninput=recalc;
+    document.getElementById('ex-amount').oninput=()=>{ amtTouched=true; checkWarn(); };
+    document.getElementById('ex-save').onclick=async()=>{
+      const name=document.getElementById('ex-name').value.trim();
+      const amount=document.getElementById('ex-amount').value;
+      if(!name){ toast('กรุณากรอกชื่อรายการ'); return; }
+      if(amount===''||clampInt(amount)<0){ toast('กรุณากรอกยอดจ่าย'); return; }
+      const takenV=document.getElementById('ex-taken').value, changeV=document.getElementById('ex-change').value;
+      const attachmentIds=await picker.commit('expense', expId||('pending-'+uuid()));
+      const rec={id:expId||uuid(),dayId:CUR_DAY.id,name,amount:clampInt(amount),
+        taken:takenV===''?null:clampInt(takenV), change:changeV===''?null:clampInt(changeV),
+        category:'general', time:editing?e.time:nowISO(), attachmentIds};
+      await dbPut('expenses',rec);
+      closeSheet(); await renderToday();
+    };
+    const delBtn=document.getElementById('ex-del');
+    if(delBtn) delBtn.onclick=async()=>{ await deleteAttachments(e.attachmentIds); await dbDelete('expenses',e.id); closeSheet(); await renderToday(); };
+  });
+}
+
+/* ===================== LOAN / RECEIVABLE ===================== */
+function openLoanSheet(id){
+  const editing=!!id; const l=editing?CUR_CTX.loans.find(x=>x.id===id):null;
+  openSheet(editing?'แก้ไขเงินยืม':'เงินยืม',(body)=>{
+    body.innerHTML=`
+      <div class="field"><label>ยืมจากใคร</label><input type="text" id="ln-who" value="${editing?escapeHtml(l.lender):''}"></div>
+      <div class="field"><label>จำนวน</label><input type="number" inputmode="numeric" id="ln-amt" class="tnum" value="${editing?l.amount:''}"></div>
+      <div class="field"><label>เหตุผล</label><input type="text" id="ln-reason" value="${editing?escapeHtml(l.reason||''):''}" placeholder="เช่น ค่าแก๊ส 2 ถัง"></div>
+      <label class="checkline"><input type="checkbox" id="ln-repaid" ${editing&&l.repaid?'checked':''}>คืนแล้ว</label>
+      <div class="btnrow"><button class="btn primary" id="ln-save">บันทึก</button></div>
+      ${editing?'<div class="btnrow"><button class="btn danger" id="ln-del">ลบรายการนี้</button></div>':''}`;
+    document.getElementById('ln-save').onclick=async()=>{
+      const lender=document.getElementById('ln-who').value.trim(), amount=document.getElementById('ln-amt').value;
+      if(!lender||amount===''){ toast('กรุณากรอกให้ครบ'); return; }
+      await dbPut('loans',{id:id||uuid(),dayId:CUR_DAY.id,lender,amount:clampInt(amount),
+        reason:document.getElementById('ln-reason').value.trim(),repaid:document.getElementById('ln-repaid').checked});
+      closeSheet(); await renderToday();
+    };
+    const delBtn=document.getElementById('ln-del'); if(delBtn) delBtn.onclick=async()=>{ await dbDelete('loans',l.id); closeSheet(); await renderToday(); };
+  });
+}
+function openRecvSheet(id){
+  const editing=!!id; const r=editing?CUR_CTX.recv.find(x=>x.id===id):null;
+  openSheet(editing?'แก้ไขติดร้าน':'ติดร้าน',(body)=>{
+    body.innerHTML=`
+      <div class="field"><label>ใครยืม</label><input type="text" id="rv-who" value="${editing?escapeHtml(r.borrower):''}"></div>
+      <div class="field"><label>จำนวน</label><input type="number" inputmode="numeric" id="rv-amt" class="tnum" value="${editing?r.amount:''}"></div>
+      <div class="field"><label>เหตุผล (ไม่บังคับ)</label><input type="text" id="rv-reason" value="${editing?escapeHtml(r.reason||''):''}"></div>
+      <label class="checkline"><input type="checkbox" id="rv-returned" ${editing&&r.returned?'checked':''}>ได้เงินคืนแล้ว</label>
+      <div class="btnrow"><button class="btn primary" id="rv-save">บันทึก</button></div>
+      ${editing?'<div class="btnrow"><button class="btn danger" id="rv-del">ลบรายการนี้</button></div>':''}`;
+    document.getElementById('rv-save').onclick=async()=>{
+      const borrower=document.getElementById('rv-who').value.trim(), amount=document.getElementById('rv-amt').value;
+      if(!borrower||amount===''){ toast('กรุณากรอกให้ครบ'); return; }
+      await dbPut('receivables',{id:id||uuid(),dayId:CUR_DAY.id,borrower,amount:clampInt(amount),
+        reason:document.getElementById('rv-reason').value.trim(),returned:document.getElementById('rv-returned').checked});
+      closeSheet(); await renderToday();
+    };
+    const delBtn=document.getElementById('rv-del'); if(delBtn) delBtn.onclick=async()=>{ await dbDelete('receivables',r.id); closeSheet(); await renderToday(); };
+  });
+}
+
+/* ===================== CLOSE DAY ===================== */
+async function attemptCloseDay(){
+  const day=CUR_DAY, ctx=CUR_CTX;
+  const issues=closeCheckIssues(day,ctx);
+  if(issues.length===0){ await doCloseDay(); return; }
+  const mt=mealTotal(ctx.meals), et=expenseTotal(ctx.expenses);
+  const total=(day.remainingCash||0)+et+mt;
+  const hasAll=day.remainingCash!=null && day.posCash!=null;
+  const diff=hasAll?total-day.posCash:null;
+  let diffLine='';
+  if(hasAll) diffLine = diff===0?'ผลต่าง: ✅ ตรง' : diff>0?`ผลต่าง: ⬆️ เกิน ${fmtMoney(diff)}`:`ผลต่าง: ⬇️ ขาด ${fmtMoney(Math.abs(diff))}`;
+  openDialog(`<h3>ยังมีรายการค้างอยู่</h3>
+    ${issues.map(i=>`<div class="issue">• ${i.text}</div>`).join('')}
+    ${diffLine?`<div class="issue" style="margin-top:8px;"><b>${diffLine}</b></div>`:''}
+    <div class="btnrow"><button class="btn secondary" id="cd-back">กลับไปแก้</button><button class="btn primary" id="cd-continue">ปิดยอดต่อ</button></div>`);
+  document.getElementById('cd-back').onclick=closeDialog;
+  document.getElementById('cd-continue').onclick=async()=>{ closeDialog(); await doCloseDay(); };
+}
+async function doCloseDay(){
+  CUR_DAY.status='closed'; CUR_DAY.closedAt=nowISO();
+  await dbPut('days',CUR_DAY);
+  await renderToday();
+  toast('ปิดยอดแล้ว');
+}
+
+/* ===================== HISTORY ===================== */
+async function renderHistory(){
+  let days=await dbGetAll('days');
+  days.sort((a,b)=> a.date<b.date?1:-1);
+  const list=document.getElementById('hist-list');
+  const rows=[];
+  for(const day of days){
+    const ctx=await dayCtx(day.id);
+    const mt=mealTotal(ctx.meals), et=expenseTotal(ctx.expenses);
+    const total=(day.remainingCash||0)+et+mt;
+    const hasAll=day.remainingCash!=null&&day.posCash!=null;
+    const diff=hasAll?total-day.posCash:null;
+    if(histFiltOpen && day.status!=='open') continue;
+    if(histFiltDiff && !(day.status==='closed'&&hasAll&&diff!==0)) continue;
+    let badge;
+    if(day.status==='open') badge=`<span class="badge-open">ยังไม่ปิด</span>`;
+    else if(!hasAll) badge=`<span class="badge-open">ปิดแล้ว</span>`;
+    else if(diff===0) badge=`<span class="badge-ok">✅ ตรง</span>`;
+    else if(diff>0) badge=`<span class="badge-over">⬆️ เกิน ${fmtMoney(diff)}</span>`;
+    else badge=`<span class="badge-under">⬇️ ขาด ${fmtMoney(Math.abs(diff))}</span>`;
+    const abnormal = day.float!==SETTINGS.defaultFloat;
+    rows.push(`<div class="hist-row" data-date="${day.date}">
+      <div><div class="d">${fmtDateThaiShort(day.date)} · ${THAI_WD_S[dowOf(day.date)]}</div>
+        <div class="sub">ค่าข้าว ${fmtMoney(mt)} · ค่าใช้จ่าย ${fmtMoney(et)}${abnormal?' · <span style="color:var(--warn);">เงินตั้งต้นไม่ปกติ</span>':''}</div></div>
+      <div class="badges">${badge}</div></div>`);
+  }
+  list.innerHTML = rows.length? rows.join('') : '<div class="empty-hint">ไม่พบข้อมูล</div>';
+  list.querySelectorAll('[data-date]').forEach(r=>r.onclick=async()=>{
+    await gotoTab('today'); await renderDate(r.dataset.date);
+  });
+}
+
+/* ===================== SUMMARY ===================== */
+function periodRange(){
+  const today=todayISO();
+  if(sumPeriod==='week'){
+    const d=dateFromISO(today); const dow=(d.getDay()+6)%7; // 0=Mon
+    const mon=addDaysISO(today,-dow); const sun=addDaysISO(mon,6);
+    return [mon,sun];
+  }
+  if(sumPeriod==='month'){
+    const d=dateFromISO(today);
+    const first=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+    const last=new Date(d.getFullYear(),d.getMonth()+1,0);
+    return [first, localISOFromDate(last)];
+  }
+  if(sumPeriod==='lastmonth'){
+    const d=dateFromISO(today); const m=d.getMonth()-1, y=m<0?d.getFullYear()-1:d.getFullYear(), mm=(m+12)%12;
+    const first=`${y}-${String(mm+1).padStart(2,'0')}-01`;
+    const last=new Date(y,mm+1,0);
+    return [first, localISOFromDate(last)];
+  }
+  return [sumFrom||today, sumTo||today];
+}
+
+async function renderSummary(){
+  const [from,to]=periodRange();
+  const allDays=await dbGetAll('days');
+  const days=allDays.filter(d=>d.date>=from&&d.date<=to).sort((a,b)=>a.date<b.date?-1:1);
+  const host=document.getElementById('sum-body');
+  if(days.length===0){ host.innerHTML='<div class="empty-hint" style="padding:30px 0;">ไม่มีข้อมูลในช่วงนี้</div>'; return; }
+
+  let mealSum=0, expSum=0, wageSum=0, closedOk=0, closedUnder=0, closedOver=0, diffSum=0;
+  const topExpense={}; const leaveCount={}; const workCount={};
+  const dailyMeal=[], dailyExp=[];
+  for(const day of days){
+    const ctx=await dayCtx(day.id);
+    const mt=mealTotal(ctx.meals), et=expenseTotal(ctx.expenses);
+    mealSum+=mt; expSum+=et;
+    dailyMeal.push(mt); dailyExp.push(et);
+    for(const e of ctx.expenses){
+      if(e.category==='parkingWage') wageSum+=e.amount;
+      topExpense[e.name]=(topExpense[e.name]||0)+e.amount;
+    }
+    for(const m of ctx.meals){
+      if(m.status==='leave') leaveCount[m.nameSnapshot]=(leaveCount[m.nameSnapshot]||0)+1;
+      const staff=m.staffId?STAFF.find(s=>s.id===m.staffId):null;
+      const isPT = m.staffId===null || (staff&&staff.type==='frequent');
+      if(isPT && m.status!=='off') workCount[m.nameSnapshot]=(workCount[m.nameSnapshot]||0)+1;
+    }
+    if(day.status==='closed' && day.remainingCash!=null && day.posCash!=null){
+      const total=day.remainingCash+et+mt; const diff=total-day.posCash;
+      diffSum+=diff;
+      if(diff===0) closedOk++; else if(diff<0) closedUnder++; else closedOver++;
+    }
+  }
+  const n=days.length;
+  const top5=Object.entries(topExpense).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const leaveRows=Object.entries(leaveCount).sort((a,b)=>b[1]-a[1]);
+  const workRows=Object.entries(workCount).sort((a,b)=>b[1]-a[1]);
+
+  function bars(vals,color){
+    const max=Math.max(1,...vals);
+    const w=100/vals.length;
+    const bars=vals.map((v,i)=>{ const h=Math.max(2,v/max*54); return `<rect x="${i*w+w*0.15}" y="${58-h}" width="${w*0.7}" height="${h}" fill="${color}" rx="1.5"></rect>`; }).join('');
+    return `<svg viewBox="0 0 100 60" preserveAspectRatio="none" style="height:70px;">${bars}<line x1="0" y1="58" x2="100" y2="58" stroke="var(--line)" stroke-width="0.5"/></svg>`;
+  }
+
+  host.innerHTML=`
+    <div class="statgrid">
+      <div class="stat"><div class="k">จำนวนวันที่ร้านเปิด</div><div class="v">${n} <small>วัน</small></div></div>
+      <div class="stat"><div class="k">ค่าจ้างโบกรถรวม</div><div class="v tnum">${fmtMoney(wageSum)}</div></div>
+      <div class="stat"><div class="k">ค่าข้าวรวม</div><div class="v tnum">${fmtMoney(mealSum)} <small>เฉลี่ย ${fmtMoney(mealSum/n)}/วัน</small></div></div>
+      <div class="stat"><div class="k">ค่าใช้จ่ายรวม</div><div class="v tnum">${fmtMoney(expSum)} <small>เฉลี่ย ${fmtMoney(expSum/n)}/วัน</small></div></div>
+    </div>
+    <div class="subgroup-label">ค่าใช้จ่ายรายวัน</div>
+    <div class="chart">${bars(dailyExp,'var(--accent)')}</div>
+    <div class="subgroup-label">ค่าข้าวรายวัน</div>
+    <div class="chart">${bars(dailyMeal,'var(--info)')}</div>
+    <div class="subgroup-label">5 รายการค่าใช้จ่ายสูงสุด</div>
+    ${top5.length? top5.map(([nm,v])=>`<div class="toprow"><span>${escapeHtml(nm)}</span><span class="tnum">${fmtMoney(v)}</span></div>`).join('') : '<div class="empty-hint">ไม่มีข้อมูล</div>'}
+    <div class="subgroup-label">การปิดยอด</div>
+    <div class="toprow"><span>ตรง</span><span class="tnum">${closedOk} วัน</span></div>
+    <div class="toprow"><span>ขาด</span><span class="tnum">${closedUnder} วัน</span></div>
+    <div class="toprow"><span>เกิน</span><span class="tnum">${closedOver} วัน</span></div>
+    <div class="toprow"><span>ผลต่างสะสม</span><span class="tnum">${diffSum>0?'+':''}${fmtMoney(diffSum)}</span></div>
+    <div class="subgroup-label">จำนวนวันลา</div>
+    ${leaveRows.length? leaveRows.map(([nm,c])=>`<div class="perbar"><span>${escapeHtml(nm)}</span><span class="tnum">${c} วัน</span></div>`).join('') : '<div class="empty-hint">ไม่มีวันลา</div>'}
+    <div class="subgroup-label">จำนวนวันทำงานพาร์ทไทม์</div>
+    ${workRows.length? workRows.map(([nm,c])=>`<div class="perbar"><span>${escapeHtml(nm)}</span><span class="tnum">${c} วัน</span></div>`).join('') : '<div class="empty-hint">ไม่มีพาร์ทไทม์</div>'}
+    <div class="btnrow"><button class="btn secondary" id="sum-export">Export ช่วงนี้</button></div>
+  `;
+  document.getElementById('sum-export').onclick=()=>exportRange(from,to);
+}
+
+/* ===================== SETTINGS ===================== */
+async function renderSettings(){
+  await refreshStaff(); await refreshSettings();
+  const host=document.getElementById('settings-body');
+  const groups={front:'หน้าร้าน',kitchen:'ในครัว',parking:'โบกรถ'};
+  let staffHtml='';
+  for(const g of ['front','kitchen','parking']){
+    const list=STAFF.filter(s=>s.group===g).sort((a,b)=>a.order-b.order);
+    staffHtml+=`<div class="staffgrp"><div class="subgroup-label">${groups[g]}</div>`;
+    if(list.length===0) staffHtml+='<div class="empty-hint">ไม่มีรายชื่อ</div>';
+    for(const s of list){
+      staffHtml+=`<div class="staffrow ${s.active?'':'inactive'}" data-staff="${s.id}">
+        <div class="ord"><button data-up="${s.id}">▲</button><button data-dn="${s.id}">▼</button></div>
+        <div class="nm">${escapeHtml(s.name)}${s.type==='frequent'?' <span class="tag" style="font-size:10px;">พาร์ทไทม์</span>':''}</div>
+        <button class="btn secondary sm" data-edit-staff="${s.id}">แก้ไข</button>
+      </div>`;
+    }
+    staffHtml+='</div>';
+  }
+
+  const dowChips=(field,current)=>['อา','จ','อ','พ','พฤ','ศ','ส'].map((lbl,i)=>
+    `<button class="daychip ${current.includes(i)?'on':''}" data-dow="${field}:${i}">${lbl}</button>`).join('');
+
+  host.innerHTML=`
+    <section class="blk"><div class="blk-head"><h2>รายชื่อพนักงาน</h2><button class="add" id="add-staff">+ เพิ่ม</button></div>${staffHtml}</section>
+    <section class="blk"><div class="blk-head"><h2>ค่าเริ่มต้น</h2></div>
+      <div class="settingsrow"><label>ค่าข้าวเริ่มต้น</label><input type="number" inputmode="numeric" class="tnum" id="s-defaultMeal" value="${SETTINGS.defaultMeal}"></div>
+      <div class="settingsrow"><label>เงินตั้งต้น</label><input type="number" inputmode="numeric" class="tnum" id="s-defaultFloat" value="${SETTINGS.defaultFloat}"></div>
+      <div class="settingsrow"><label>ค่าจ้างโบกรถ</label><input type="number" inputmode="numeric" class="tnum" id="s-parkingWage" value="${SETTINGS.parkingWage}"></div>
+      <div class="settingsrow"><label>จำนวนคนโบกรถที่ได้ค่าข้าว</label><input type="number" inputmode="numeric" class="tnum" id="s-parkingMealCount" value="${SETTINGS.parkingMealCount}"></div>
+      <div class="settingsrow"><label>เวลาเริ่มแจ้งเตือน</label><input type="time" id="s-reminderTime" value="${SETTINGS.reminderTime}"></div>
+      <div class="settingsrow" style="flex-direction:column;align-items:flex-start;"><label>วันร้านหยุด</label><div class="daychip-wrap">${dowChips('closedDays',SETTINGS.closedDays)}</div></div>
+      <div class="settingsrow" style="flex-direction:column;align-items:flex-start;"><label>วันที่มีค่าจ้างโบกรถ</label><div class="daychip-wrap">${dowChips('parkingWageDays',SETTINGS.parkingWageDays)}</div></div>
+      <div class="settingsrow" style="flex-direction:column;align-items:flex-start;"><label>วันที่มีค่าข้าวโบกรถ</label><div class="daychip-wrap">${dowChips('parkingMealDays',SETTINGS.parkingMealDays)}</div></div>
+      <div class="hint">การแก้ค่าเริ่มต้นมีผลกับวันใหม่เท่านั้น ไม่ย้อนแก้วันที่สร้างไว้แล้ว</div>
+    </section>
+    <section class="blk"><div class="blk-head"><h2>สำรองข้อมูล</h2></div>
+      <div class="hint" style="margin-bottom:10px;">สำรองล่าสุด: ${SETTINGS.lastBackupAt? (fmtDateThaiShort(SETTINGS.lastBackupAt.slice(0,10))+' '+fmtTime(SETTINGS.lastBackupAt)) : 'ยังไม่เคยสำรอง'}</div>
+      <div class="btnrow"><button class="btn secondary" id="exp-xlsx">Export Excel (.xlsx)</button></div>
+      <div class="btnrow"><button class="btn secondary" id="exp-csv">Export CSV (แต่ละตาราง)</button></div>
+      <div class="btnrow"><button class="btn secondary" id="exp-json">สำรองเต็ม (.json)</button></div>
+      <div class="btnrow"><button class="btn secondary" id="imp-json">นำเข้าข้อมูลสำรอง</button><input type="file" id="imp-file" accept="application/json" style="display:none;"></div>
+      <div class="backup-note">⚠️ เว็บแอปนี้ไม่มีเซิร์ฟเวอร์ จึงแจ้งเตือนแบบเด้ง (push) ตอนปิดแอปอยู่ไม่ได้ แถบเตือนจะเห็นเมื่อเปิดแอปเท่านั้น ถ้าต้องการให้เด้งเตือน แนะนำให้ตั้ง Reminder ใน iPhone เวลา ${SETTINGS.reminderTime} วันอังคาร–เสาร์ไว้คู่กัน</div>
+    </section>
+  `;
+
+  document.getElementById('add-staff').onclick=()=>openStaffSheet(null);
+  host.querySelectorAll('[data-edit-staff]').forEach(b=>b.onclick=()=>openStaffSheet(b.dataset.editStaff));
+  host.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>moveStaff(b.dataset.up,-1));
+  host.querySelectorAll('[data-dn]').forEach(b=>b.onclick=()=>moveStaff(b.dataset.dn,1));
+  host.querySelectorAll('[data-dow]').forEach(b=>b.onclick=async()=>{
+    const [field,idx]=b.dataset.dow.split(':'); const i=+idx;
+    const arr=new Set(SETTINGS[field]);
+    if(arr.has(i)) arr.delete(i); else arr.add(i);
+    SETTINGS[field]=[...arr].sort();
+    await dbPut('settings',SETTINGS); await renderSettings();
+  });
+  const bindNum=(id,field)=>document.getElementById(id).onchange=async(e)=>{ SETTINGS[field]=clampInt(e.target.value,1); await dbPut('settings',SETTINGS); toast('บันทึกแล้ว'); };
+  bindNum('s-defaultMeal','defaultMeal'); bindNum('s-defaultFloat','defaultFloat'); bindNum('s-parkingWage','parkingWage'); bindNum('s-parkingMealCount','parkingMealCount');
+  document.getElementById('s-reminderTime').onchange=async(e)=>{ SETTINGS.reminderTime=e.target.value; await dbPut('settings',SETTINGS); };
+  document.getElementById('exp-xlsx').onclick=()=>exportRange(null,null,'xlsx');
+  document.getElementById('exp-csv').onclick=()=>exportRange(null,null,'csv');
+  document.getElementById('exp-json').onclick=fullBackupExport;
+  document.getElementById('imp-json').onclick=()=>document.getElementById('imp-file').click();
+  document.getElementById('imp-file').onchange=(e)=>{ if(e.target.files[0]) importBackup(e.target.files[0]); };
+}
+
+async function moveStaff(id,dir){
+  const s=STAFF.find(x=>x.id===id);
+  const siblings=STAFF.filter(x=>x.group===s.group).sort((a,b)=>a.order-b.order);
+  const idx=siblings.findIndex(x=>x.id===id);
+  const swapIdx=idx+dir;
+  if(swapIdx<0||swapIdx>=siblings.length) return;
+  const other=siblings[swapIdx];
+  const tmp=s.order; s.order=other.order; other.order=tmp;
+  await dbPut('staff',s); await dbPut('staff',other);
+  await renderSettings();
+}
+
+function openStaffSheet(id){
+  const editing=!!id; const s=editing?STAFF.find(x=>x.id===id):null;
+  openSheet(editing?'แก้ไขพนักงาน':'เพิ่มพนักงาน',(body)=>{
+    body.innerHTML=`
+      <div class="field"><label>ชื่อ</label><input type="text" id="st-name" value="${editing?escapeHtml(s.name):''}"></div>
+      <div class="field"><label>กลุ่ม</label><div class="seg" id="st-group">
+        <button data-g="front" class="${(!editing||s.group==='front')?'on':''}">หน้าร้าน</button>
+        <button data-g="kitchen" class="${editing&&s.group==='kitchen'?'on':''}">ในครัว</button>
+        <button data-g="parking" class="${editing&&s.group==='parking'?'on':''}">โบกรถ</button></div></div>
+      <div class="field"><label>ประเภท</label><div class="seg" id="st-type">
+        <button data-t="regular" class="${(!editing||s.type==='regular')?'on':''}">ประจำ</button>
+        <button data-t="frequent" class="${editing&&s.type==='frequent'?'on':''}">พาร์ทไทม์บ่อย</button></div></div>
+      ${editing?`<label class="checkline"><input type="checkbox" id="st-active" ${s.active?'checked':''}>ใช้งานอยู่ (ปิดแทนการลบถ้าลาออก)</label>`:''}
+      ${!editing?`<div class="hint">คนใหม่ที่เป็น "ประจำ" จะถูกเพิ่มเข้าค่าข้าวของวันนี้ (ถ้ายังไม่ปิดยอด) ให้อัตโนมัติ</div>`:''}
+      <div class="btnrow"><button class="btn primary" id="st-save">บันทึก</button></div>`;
+    let g=editing?s.group:'front', t=editing?s.type:'regular';
+    document.querySelectorAll('#st-group button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#st-group button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); g=b.dataset.g; });
+    document.querySelectorAll('#st-type button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#st-type button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); t=b.dataset.t; });
+    document.getElementById('st-save').onclick=async()=>{
+      const name=document.getElementById('st-name').value.trim();
+      if(!name){ toast('กรุณากรอกชื่อ'); return; }
+      let rec;
+      if(editing){ s.name=name; s.group=g; s.type=t; s.active=document.getElementById('st-active').checked; await dbPut('staff',s); rec=s; }
+      else { rec={id:uuid(),name,group:g,type:t,active:true,order:STAFF.filter(x=>x.group===g).length}; await dbPut('staff',rec); }
+      await backfillRegularStaffToOpenDays(rec);
+      closeSheet(); await renderSettings();
+    };
+  });
+}
+
+// keeps already-created (but not-yet-closed) days in sync when a "regular" staff member
+// is added, reactivated, or switched to "ประจำ" from Settings — otherwise they'd only
+// start appearing in mealEntries the next time a brand-new day is auto-created.
+async function backfillRegularStaffToOpenDays(staff){
+  if(staff.type!=='regular' || !staff.active) return;
+  const days=await dbGetAll('days');
+  for(const day of days.filter(d=>d.status==='open')){
+    const existing=await dbGetByIndex('mealEntries','dayId',day.id);
+    if(existing.some(m=>m.staffId===staff.id)) continue;
+    await dbPut('mealEntries',{id:uuid(),dayId:day.id,staffId:staff.id,nameSnapshot:staff.name,group:staff.group,status:'pending',amount:SETTINGS.defaultMeal,tripId:null});
+  }
+}
+
+/* ===================== EXPORT / BACKUP ===================== */
+function downloadBlob(blob,filename){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },400);
+}
+function csvEscape(v){ v=v==null?'':String(v); if(/[",\n]/.test(v)) v='"'+v.replace(/"/g,'""')+'"'; return v; }
+function rowsToCSV(headers,rows){
+  const lines=[headers.join(',')];
+  for(const r of rows) lines.push(headers.map(h=>csvEscape(r[h])).join(','));
+  return '\uFEFF'+lines.join('\r\n');
+}
+let sheetJSPromise=null;
+function loadSheetJS(){
+  if(window.XLSX) return Promise.resolve();
+  if(sheetJSPromise) return sheetJSPromise;
+  sheetJSPromise=new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload=res; s.onerror=rej; document.head.appendChild(s);
+  });
+  return sheetJSPromise;
+}
+
+async function buildExportTables(from,to){
+  let days=await dbGetAll('days');
+  if(from&&to) days=days.filter(d=>d.date>=from&&d.date<=to);
+  days.sort((a,b)=>a.date<b.date?-1:1);
+  const Days=[],Meals=[],MealTrips=[],Expenses=[],Loans=[],Receivables=[],DailySummary=[];
+  for(const day of days){
+    const ctx=await dayCtx(day.id);
+    const mt=mealTotal(ctx.meals), et=expenseTotal(ctx.expenses);
+    const total=(day.remainingCash||0)+et+mt;
+    const hasAll=day.remainingCash!=null&&day.posCash!=null;
+    const diff=hasAll?total-day.posCash:'';
+    Days.push({date:day.date,float:day.float,floatNote:day.floatNote,setAside:day.setAside,remainingCash:day.remainingCash,posCash:day.posCash,status:day.status,closedAt:day.closedAt,isSpecialOpen:day.isSpecialOpen,note:day.note});
+    for(const m of ctx.meals) Meals.push({date:day.date,name:m.nameSnapshot,group:m.group,status:m.status,amount:m.amount,tripId:m.tripId||''});
+    for(const t of ctx.trips) MealTrips.push({date:day.date,buyer:t.buyer,taken:t.taken,change:t.change,spent:t.spent,time:t.time,members:t.memberEntryIds.map(id=>{const m=ctx.meals.find(x=>x.id===id);return m?m.nameSnapshot:'';}).join('|'),photos:(t.attachmentIds||[]).length});
+    for(const e of ctx.expenses) Expenses.push({date:day.date,name:e.name,amount:e.amount,taken:e.taken,change:e.change,category:e.category,paid:e.category==='parkingWage'?e.paid:'',time:e.time});
+    for(const l of ctx.loans) Loans.push({date:day.date,lender:l.lender,amount:l.amount,reason:l.reason,repaid:l.repaid});
+    for(const r of ctx.recv) Receivables.push({date:day.date,borrower:r.borrower,amount:r.amount,reason:r.reason,returned:r.returned});
+    DailySummary.push({date:day.date,weekday:THAI_WD[dowOf(day.date)],float:day.float,floatNote:day.floatNote,setAside:day.setAside,remainingCash:day.remainingCash,
+      mealTotal:mt,expenseTotal:et,total,posCash:day.posCash,diff,result:!hasAll?'':(diff===0?'ตรง':diff>0?'เกิน':'ขาด'),closedAt:day.closedAt});
+  }
+  return {Days,Meals,MealTrips,Expenses,Loans,Receivables,DailySummary};
+}
+
+async function markBackedUp(){ SETTINGS.lastBackupAt=nowISO(); await dbPut('settings',SETTINGS); }
+
+async function exportRange(from,to,format){
+  format = format || 'xlsx';
+  const tabs=await buildExportTables(from,to);
+  const stamp=todayISO();
+  if(format==='xlsx'){
+    toast('กำลังเตรียมไฟล์ Excel...');
+    await loadSheetJS();
+    const wb=XLSX.utils.book_new();
+    for(const name of ['Days','Meals','MealTrips','Expenses','Loans','Receivables','DailySummary']){
+      const ws=XLSX.utils.json_to_sheet(tabs[name]);
+      XLSX.utils.book_append_sheet(wb,ws,name);
+    }
+    XLSX.writeFile(wb,`restaurant-log-${stamp}.xlsx`);
+  } else {
+    for(const name of ['Days','Meals','MealTrips','Expenses','Loans','Receivables','DailySummary']){
+      const rows=tabs[name]; if(rows.length===0) continue;
+      const headers=Object.keys(rows[0]);
+      const csv=rowsToCSV(headers,rows);
+      downloadBlob(new Blob([csv],{type:'text/csv;charset=utf-8'}),`${name}-${stamp}.csv`);
+      await new Promise(r=>setTimeout(r,180));
+    }
+  }
+  await markBackedUp();
+  toast('สำรองข้อมูลแล้ว');
+}
+
+function blobToBase64(blob){
+  return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); });
+}
+function base64ToBlob(dataUrl){
+  return fetch(dataUrl).then(r=>r.blob());
+}
+async function fullBackupExport(){
+  toast('กำลังสำรองข้อมูล...');
+  const [settings,staff,days,mealEntries,mealTrips,expenses,loans,receivables,attachments]=await Promise.all(
+    ['settings','staff','days','mealEntries','mealTrips','expenses','loans','receivables','attachments'].map(dbGetAll));
+  const attOut=[];
+  for(const a of attachments){ attOut.push({id:a.id,mime:a.mime,parentType:a.parentType,parentId:a.parentId,data:await blobToBase64(a.blob)}); }
+  const data={version:1,exportedAt:nowISO(),settings,staff,days,mealEntries,mealTrips,expenses,loans,receivables,attachments:attOut};
+  downloadBlob(new Blob([JSON.stringify(data)],{type:'application/json'}),`backup-${todayISO()}.json`);
+  await markBackedUp();
+  toast('สำรองเต็มเสร็จแล้ว');
+}
+async function importBackup(file){
+  const text=await file.text();
+  let data; try{ data=JSON.parse(text); }catch(e){ toast('ไฟล์ไม่ถูกต้อง'); return; }
+  openDialog(`<h3>นำเข้าข้อมูลสำรอง</h3>
+    <p style="font-size:13.5px;color:var(--ink-dim);">พบ ${((data.days||[]).length)} วัน และรูป ${((data.attachments||[]).length)} รูปในไฟล์นี้ ต้องการนำเข้าแบบไหน?</p>
+    <div class="btnrow" style="flex-direction:column;">
+      <button class="btn danger" id="imp-replace">แทนที่ทั้งหมด</button>
+      <button class="btn secondary" id="imp-merge">รวมเข้า (เก็บของเดิมไว้ถ้าซ้ำ id)</button>
+      <button class="btn ghost" id="imp-cancel">ยกเลิก</button>
+    </div>`);
+  document.getElementById('imp-cancel').onclick=closeDialog;
+  document.getElementById('imp-replace').onclick=()=>doImport(data,true);
+  document.getElementById('imp-merge').onclick=()=>doImport(data,false);
+}
+async function doImport(data,replace){
+  closeDialog(); toast('กำลังนำเข้า...');
+  const stores=['days','mealEntries','mealTrips','expenses','loans','receivables','staff'];
+  if(replace){
+    for(const st of stores){ const all=await dbGetAll(st); for(const r of all) await dbDelete(st,r.id); }
+    const allAtt=await dbGetAll('attachments'); for(const a of allAtt) await dbDelete('attachments',a.id);
+  }
+  for(const st of stores){
+    for(const rec of (data[st]||[])){
+      if(!replace){ const existing=await dbGet(st,rec.id); if(existing) continue; }
+      await dbPut(st,rec);
+    }
+  }
+  for(const a of (data.attachments||[])){
+    if(!replace){ const existing=await dbGet('attachments',a.id); if(existing) continue; }
+    const blob=await base64ToBlob(a.data);
+    await dbPut('attachments',{id:a.id,blob,mime:a.mime,parentType:a.parentType,parentId:a.parentId});
+  }
+  if(data.settings){ if(replace) await dbPut('settings',{...data.settings,id:'main'}); }
+  await refreshSettings(); await refreshStaff();
+  toast('นำเข้าข้อมูลเสร็จแล้ว');
+  await renderDate(curDate); await gotoTab(curTab);
+}
+
+/* ===================== NOTIFICATIONS ===================== */
+async function maybeRollToToday(){
+  const nowToday=todayISO();
+  if(nowToday!==lastKnownToday){
+    const wasOnToday = (curDate===lastKnownToday); // only auto-advance if they weren't off looking at some other date
+    lastKnownToday=nowToday;
+    if(wasOnToday){ await renderDate(nowToday); }
+  }
+}
+async function reminderIssuesForToday(){
+  const dateStr=todayISO();
+  if(isClosedWeekday(dateStr)){ const d=await dbGetByDate(dateStr); if(!d) return []; }
+  const day=await dbGetByDate(dateStr);
+  if(!day || day.status!=='open') return [];
+  const ctx=await dayCtx(day.id);
+  // reuse the same list as the overview card's "ห้ามลืม" checklist, but skip the
+  // "pending meal" line here — that one is only useful while looking at the day itself.
+  return pendingIssuesFor(ctx).filter(i=>i.key!=='meal').map(i=>({anchor:i.key,text:'⚠️ '+i.text}));
+}
+function timeNowHM(){ const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+async function checkNotifications(){
+  await maybeRollToToday();
+  const issues=await reminderIssuesForToday();
+  const dot=document.getElementById('dot-today');
+  dot.classList.toggle('hide', issues.length===0);
+  const banners=document.getElementById('banners');
+  banners.innerHTML='';
+  const pastReminder = timeNowHM() >= (SETTINGS.reminderTime||'19:30');
+  if(pastReminder && issues.length){
+    const b=el('div','banner warn', issues.map(i=>i.text).join(' · '));
+    b.onclick=async()=>{ await gotoTab('today'); await renderDate(todayISO()); jumpToSection(issues[0].anchor); };
+    banners.appendChild(b);
+  }
+  const staleDays = SETTINGS.lastBackupAt ? (Date.now()-new Date(SETTINGS.lastBackupAt).getTime())/86400000 : Infinity;
+  if(staleDays>7){
+    const days = SETTINGS.lastBackupAt ? Math.floor(staleDays) : '—';
+    const b=el('div','banner muted', `ยังไม่ได้สำรองข้อมูลมา ${days} วัน`);
+    b.onclick=()=>gotoTab('settings');
+    banners.appendChild(b);
+  }
+}
+async function refreshTodayDot(){ await checkNotifications(); }
+function startNotifLoop(){
+  checkNotifications();
+  notifTimer=setInterval(checkNotifications,60000);
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkNotifications(); });
+}
+
+/* ===================== INIT ===================== */
+boot();
+</script>
+</body>
+</html>
