@@ -1500,6 +1500,7 @@ function openStaffSheet(id){
         <button data-t="regular" class="${(!editing||s.type==='regular')?'on':''}">ประจำ</button>
         <button data-t="frequent" class="${editing&&s.type==='frequent'?'on':''}">พาร์ทไทม์บ่อย</button></div></div>
       ${editing?`<label class="checkline"><input type="checkbox" id="st-active" ${s.active?'checked':''}>ใช้งานอยู่ (ปิดแทนการลบถ้าลาออก)</label>`:''}
+      ${!editing?`<div class="hint">คนใหม่ที่เป็น "ประจำ" จะถูกเพิ่มเข้าค่าข้าวของวันนี้ (ถ้ายังไม่ปิดยอด) ให้อัตโนมัติ</div>`:''}
       <div class="btnrow"><button class="btn primary" id="st-save">บันทึก</button></div>`;
     let g=editing?s.group:'front', t=editing?s.type:'regular';
     document.querySelectorAll('#st-group button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#st-group button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); g=b.dataset.g; });
@@ -1507,11 +1508,26 @@ function openStaffSheet(id){
     document.getElementById('st-save').onclick=async()=>{
       const name=document.getElementById('st-name').value.trim();
       if(!name){ toast('กรุณากรอกชื่อ'); return; }
-      if(editing){ s.name=name; s.group=g; s.type=t; s.active=document.getElementById('st-active').checked; await dbPut('staff',s); }
-      else { await dbPut('staff',{id:uuid(),name,group:g,type:t,active:true,order:STAFF.filter(x=>x.group===g).length}); }
+      let rec;
+      if(editing){ s.name=name; s.group=g; s.type=t; s.active=document.getElementById('st-active').checked; await dbPut('staff',s); rec=s; }
+      else { rec={id:uuid(),name,group:g,type:t,active:true,order:STAFF.filter(x=>x.group===g).length}; await dbPut('staff',rec); }
+      await backfillRegularStaffToOpenDays(rec);
       closeSheet(); await renderSettings();
     };
   });
+}
+
+// keeps already-created (but not-yet-closed) days in sync when a "regular" staff member
+// is added, reactivated, or switched to "ประจำ" from Settings — otherwise they'd only
+// start appearing in mealEntries the next time a brand-new day is auto-created.
+async function backfillRegularStaffToOpenDays(staff){
+  if(staff.type!=='regular' || !staff.active) return;
+  const days=await dbGetAll('days');
+  for(const day of days.filter(d=>d.status==='open')){
+    const existing=await dbGetByIndex('mealEntries','dayId',day.id);
+    if(existing.some(m=>m.staffId===staff.id)) continue;
+    await dbPut('mealEntries',{id:uuid(),dayId:day.id,staffId:staff.id,nameSnapshot:staff.name,group:staff.group,status:'pending',amount:SETTINGS.defaultMeal,tripId:null});
+  }
 }
 
 /* ===================== EXPORT / BACKUP ===================== */
