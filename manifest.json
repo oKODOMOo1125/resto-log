@@ -1,0 +1,18 @@
+{
+  "name": "บันทึกประจำวันร้านอาหาร",
+  "short_name": "บันทึกร้าน",
+  "description": "แทนสมุดจดประจำวันของร้าน: ค่าข้าวพนักงาน ค่าใช้จ่าย เงินยืม ติดร้าน และปิดยอด",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EDEAE2",
+  "theme_color": "#235A4E",
+  "lang": "th",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
